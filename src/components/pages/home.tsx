@@ -91,7 +91,7 @@ export default function Home() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-b to-black text-white from-[#cccccc]">
       {/* Header */}
       <header className="border-b border-gray-800">
         <div className="container mx-auto px-4 py-4">
@@ -128,7 +128,6 @@ export default function Home() {
           </div>
         </div>
       </header>
-
       {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
@@ -169,7 +168,7 @@ export default function Home() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-gray-600 text-white hover:bg-gray-800 text-lg px-8 py-4"
+                    className="border-gray-600 hover:bg-gray-800 text-lg px-8 py-4 text-red"
                   >
                     Sign In
                   </Button>
@@ -179,7 +178,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Features Section */}
       <section className="py-20 px-4 bg-gray-900/50">
         <div className="container mx-auto">
@@ -212,7 +210,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* Testimonials Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto">
@@ -258,7 +255,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-red-900/50 to-orange-900/50">
         <div className="container mx-auto text-center">
@@ -292,7 +288,6 @@ export default function Home() {
           )}
         </div>
       </section>
-
       {/* Footer */}
       <footer className="border-t border-gray-800 py-12 px-4">
         <div className="container mx-auto">
