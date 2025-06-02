@@ -1,0 +1,115 @@
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  LayoutDashboard,
+  Target,
+  Scale,
+  CheckSquare,
+  BarChart3,
+  Settings,
+  HelpCircle,
+  Dumbbell,
+} from "lucide-react";
+
+interface NavItem {
+  icon: React.ReactNode;
+  label: string;
+  key: string;
+}
+
+interface SidebarProps {
+  activeItem?: string;
+  onItemClick?: (key: string) => void;
+}
+
+const navItems: NavItem[] = [
+  { icon: <LayoutDashboard size={18} />, label: "Dashboard", key: "dashboard" },
+  { icon: <Target size={18} />, label: "Lift Tracking", key: "lifts" },
+  { icon: <Scale size={18} />, label: "Weight Management", key: "weight" },
+  { icon: <CheckSquare size={18} />, label: "Equipment", key: "equipment" },
+  { icon: <BarChart3 size={18} />, label: "Analytics", key: "analytics" },
+];
+
+const bottomItems: NavItem[] = [
+  { icon: <Settings size={18} />, label: "Settings", key: "settings" },
+  { icon: <HelpCircle size={18} />, label: "Help", key: "help" },
+];
+
+const Sidebar = ({
+  activeItem = "dashboard",
+  onItemClick = () => {},
+}: SidebarProps) => {
+  return (
+    <div className="w-[240px] h-full border-r border-gray-700 bg-gray-800 flex flex-col">
+      <div className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Dumbbell className="h-6 w-6 text-red-500" />
+          <h2 className="text-lg font-semibold text-white">Meet Prep</h2>
+        </div>
+        <p className="text-sm text-gray-400">
+          Track your powerlifting preparation
+        </p>
+      </div>
+
+      <ScrollArea className="flex-1 px-3">
+        <div className="space-y-1">
+          {navItems.map((item) => (
+            <Button
+              key={item.key}
+              variant={item.key === activeItem ? "secondary" : "ghost"}
+              className={`w-full justify-start gap-2 text-sm h-10 ${
+                item.key === activeItem
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
+              }`}
+              onClick={() => onItemClick(item.key)}
+            >
+              {item.icon}
+              {item.label}
+            </Button>
+          ))}
+        </div>
+
+        <Separator className="my-4 bg-gray-700" />
+
+        <div className="space-y-1">
+          <h3 className="text-xs font-medium px-3 py-2 text-gray-500">
+            Quick Stats
+          </h3>
+          <div className="px-3 py-2 text-xs text-gray-400">
+            <div className="flex justify-between mb-1">
+              <span>Days to Meet:</span>
+              <span className="text-red-400 font-medium">--</span>
+            </div>
+            <div className="flex justify-between mb-1">
+              <span>Current Total:</span>
+              <span className="text-blue-400 font-medium">-- kg</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Equipment Ready:</span>
+              <span className="text-green-400 font-medium">--%</span>
+            </div>
+          </div>
+        </div>
+      </ScrollArea>
+
+      <div className="p-3 mt-auto border-t border-gray-700">
+        {bottomItems.map((item) => (
+          <Button
+            key={item.key}
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm h-10 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white"
+            onClick={() => onItemClick(item.key)}
+          >
+            {item.icon}
+            {item.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Sidebar;
