@@ -49,7 +49,7 @@ const TopNavigation = ({
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search..."
+            placeholder="Search lifts, equipment..."
             className="pl-8 h-9 text-sm bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-gray-500"
             onChange={(e) => onSearch(e.target.value)}
           />
