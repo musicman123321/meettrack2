@@ -34,8 +34,14 @@ export default function SignUpForm() {
         variant: "default",
       });
       navigate("/login");
-    } catch (error) {
-      setError("Error creating account");
+    } catch (error: any) {
+      const message = error?.message || "Error creating account";
+      setError(message);
+      toast({
+        title: "Sign up failed",
+        description: message,
+        variant: "destructive",
+      });
     }
   };
 
