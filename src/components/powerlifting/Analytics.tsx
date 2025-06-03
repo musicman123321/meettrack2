@@ -20,12 +20,18 @@ interface AnalyticsProps {
 }
 
 const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
-  const { currentStats, meetGoals } = usePowerlifting();
+  const { state } = usePowerlifting();
+  const { currentStats, meetGoals } = state;
+
+  // Convert kg to lbs for display (1 kg = 2.20462 lbs)
+  const kgToLbs = (kg: number) => Math.round(kg * 2.20462 * 100) / 100;
+  const lbsToKg = (lbs: number) => Math.round((lbs / 2.20462) * 100) / 100;
+
   const [calculatorInputs, setCalculatorInputs] = React.useState({
-    bodyweight: currentStats.bodyweight || 0,
-    squat: currentStats.squat || 0,
-    bench: currentStats.bench || 0,
-    deadlift: currentStats.deadlift || 0,
+    bodyweight: kgToLbs(currentStats.weight || 0),
+    squat: kgToLbs(currentStats.squatMax || 0),
+    bench: kgToLbs(currentStats.benchMax || 0),
+    deadlift: kgToLbs(currentStats.deadliftMax || 0),
   });
 
   // Calculate Wilks Score
@@ -93,7 +99,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
   const currentTotal =
     calculatorInputs.squat + calculatorInputs.bench + calculatorInputs.deadlift;
   const goalTotal =
-    (meetGoals.squat || 0) + (meetGoals.bench || 0) + (meetGoals.deadlift || 0);
+    kgToLbs(meetGoals.squat?.third || 0) +
+    kgToLbs(meetGoals.bench?.third || 0) +
+    kgToLbs(meetGoals.deadlift?.third || 0);
   const wilksScore = calculateWilks(calculatorInputs.bodyweight, currentTotal);
   const dotsScore = calculateDOTS(calculatorInputs.bodyweight, currentTotal);
   const goalWilks = calculateWilks(calculatorInputs.bodyweight, goalTotal);
@@ -130,280 +138,320 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
 
   const loadCurrentStats = () => {
     setCalculatorInputs({
-      bodyweight: currentStats.bodyweight || 0,
-      squat: currentStats.squat || 0,
-      bench: currentStats.bench || 0,
-      deadlift: currentStats.deadlift || 0,
+      bodyweight: kgToLbs(currentStats.weight || 0),
+      squat: kgToLbs(currentStats.squatMax || 0),
+      bench: kgToLbs(currentStats.benchMax || 0),
+      deadlift: kgToLbs(currentStats.deadliftMax || 0),
     });
   };
 
   return (
-    <div className={`space-y-6 bg-white p-6 ${className}`}>
-      <div className="flex items-center gap-2 mb-6">
-        <Calculator className="h-6 w-6 text-blue-600" />
-        <h2 className="text-2xl font-bold text-gray-900">
-          Analytics & Calculators
-        </h2>
-      </div>
+    <div
+      className={`min-h-screen bg-gray-900 text-white p-4 md:p-6 ${className}`}
+    >
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Calculator className="h-6 w-6 text-blue-400" />
+          <h2 className="text-2xl font-bold text-white">
+            Analytics & Calculators
+          </h2>
+        </div>
 
-      {/* Score Calculator */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5" />
-            Strength Score Calculator
-          </CardTitle>
-          <CardDescription>
-            Calculate your Wilks and DOTS scores to compare your strength across
-            weight classes
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="bodyweight">Bodyweight (lbs)</Label>
-              <Input
-                id="bodyweight"
-                type="number"
-                value={calculatorInputs.bodyweight}
-                onChange={(e) =>
-                  handleInputChange("bodyweight", e.target.value)
-                }
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="squat">Squat (lbs)</Label>
-              <Input
-                id="squat"
-                type="number"
-                value={calculatorInputs.squat}
-                onChange={(e) => handleInputChange("squat", e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="bench">Bench (lbs)</Label>
-              <Input
-                id="bench"
-                type="number"
-                value={calculatorInputs.bench}
-                onChange={(e) => handleInputChange("bench", e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="deadlift">Deadlift (lbs)</Label>
-              <Input
-                id="deadlift"
-                type="number"
-                value={calculatorInputs.deadlift}
-                onChange={(e) => handleInputChange("deadlift", e.target.value)}
-                placeholder="0"
-              />
-            </div>
-          </div>
-
-          <Button
-            onClick={loadCurrentStats}
-            variant="outline"
-            className="w-full"
-          >
-            Load Current Stats
-          </Button>
-
-          <Separator />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
-                {currentTotal.toFixed(0)}
-              </div>
-              <div className="text-sm text-gray-600">Total (lbs)</div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {wilksScore.toFixed(1)}
-              </div>
-              <div className="text-sm text-gray-600">Wilks Score</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">
-                {dotsScore.toFixed(1)}
-              </div>
-              <div className="text-sm text-gray-600">DOTS Score</div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-2">
-            <Badge className={`${strengthLevel.color} text-white`}>
-              {strengthLevel.level}
-            </Badge>
-            <span className="text-sm text-gray-600">Strength Level</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Goal Comparison */}
-      {goalTotal > 0 && (
-        <Card>
+        {/* Score Calculator */}
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Goal Comparison
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Award className="h-5 w-5 text-yellow-500" />
+              Strength Score Calculator
             </CardTitle>
-            <CardDescription>
-              Compare your current performance with your meet goals
+            <CardDescription className="text-gray-400">
+              Calculate your Wilks and DOTS scores to compare your strength
+              across weight classes
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="font-semibold text-gray-900">Current</h4>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>Total:</span>
-                    <span className="font-medium">{currentTotal} lbs</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Wilks:</span>
-                    <span className="font-medium">{wilksScore.toFixed(1)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>DOTS:</span>
-                    <span className="font-medium">{dotsScore.toFixed(1)}</span>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="bodyweight" className="text-gray-300">
+                  Bodyweight (lbs)
+                </Label>
+                <Input
+                  id="bodyweight"
+                  type="number"
+                  value={calculatorInputs.bodyweight}
+                  onChange={(e) =>
+                    handleInputChange("bodyweight", e.target.value)
+                  }
+                  placeholder="0"
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
               </div>
-              <div className="space-y-2">
-                <h4 className="font-semibold text-gray-900">Goal</h4>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>Total:</span>
-                    <span className="font-medium">{goalTotal} lbs</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Wilks:</span>
-                    <span className="font-medium">{goalWilks.toFixed(1)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>DOTS:</span>
-                    <span className="font-medium">{goalDOTS.toFixed(1)}</span>
-                  </div>
-                </div>
+              <div>
+                <Label htmlFor="squat" className="text-gray-300">
+                  Squat (lbs)
+                </Label>
+                <Input
+                  id="squat"
+                  type="number"
+                  value={calculatorInputs.squat}
+                  onChange={(e) => handleInputChange("squat", e.target.value)}
+                  placeholder="0"
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="bench" className="text-gray-300">
+                  Bench (lbs)
+                </Label>
+                <Input
+                  id="bench"
+                  type="number"
+                  value={calculatorInputs.bench}
+                  onChange={(e) => handleInputChange("bench", e.target.value)}
+                  placeholder="0"
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
+              </div>
+              <div>
+                <Label htmlFor="deadlift" className="text-gray-300">
+                  Deadlift (lbs)
+                </Label>
+                <Input
+                  id="deadlift"
+                  type="number"
+                  value={calculatorInputs.deadlift}
+                  onChange={(e) =>
+                    handleInputChange("deadlift", e.target.value)
+                  }
+                  placeholder="0"
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progress to Goal</span>
-                <span>{((currentTotal / goalTotal) * 100).toFixed(1)}%</span>
+            <Button
+              onClick={loadCurrentStats}
+              variant="outline"
+              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Load Current Stats
+            </Button>
+
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-blue-900/30 rounded-lg border border-blue-500/30">
+                <div className="text-2xl font-bold text-blue-400">
+                  {currentTotal.toFixed(0)}
+                </div>
+                <div className="text-sm text-gray-400">Total (lbs)</div>
               </div>
-              <Progress
-                value={(currentTotal / goalTotal) * 100}
-                className="h-2"
-              />
+              <div className="text-center p-4 bg-green-900/30 rounded-lg border border-green-500/30">
+                <div className="text-2xl font-bold text-green-400">
+                  {wilksScore.toFixed(1)}
+                </div>
+                <div className="text-sm text-gray-400">Wilks Score</div>
+              </div>
+              <div className="text-center p-4 bg-purple-900/30 rounded-lg border border-purple-500/30">
+                <div className="text-2xl font-bold text-purple-400">
+                  {dotsScore.toFixed(1)}
+                </div>
+                <div className="text-sm text-gray-400">DOTS Score</div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2">
+              <Badge
+                className={`${strengthLevel.color} text-white border-none`}
+              >
+                {strengthLevel.level}
+              </Badge>
+              <span className="text-sm text-gray-400">Strength Level</span>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Lift Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Lift Distribution
-          </CardTitle>
-          <CardDescription>
-            Breakdown of your total across the three lifts
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Squat</span>
-              <span className="text-sm text-gray-600">
-                {liftDistribution.squat.toFixed(1)}%
-              </span>
-            </div>
-            <Progress value={liftDistribution.squat} className="h-2" />
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Bench Press</span>
-              <span className="text-sm text-gray-600">
-                {liftDistribution.bench.toFixed(1)}%
-              </span>
-            </div>
-            <Progress value={liftDistribution.bench} className="h-2" />
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Deadlift</span>
-              <span className="text-sm text-gray-600">
-                {liftDistribution.deadlift.toFixed(1)}%
-              </span>
-            </div>
-            <Progress value={liftDistribution.deadlift} className="h-2" />
-          </div>
-
-          <Separator />
-
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-lg font-bold text-blue-600">
-                {calculatorInputs.squat}
+        {/* Goal Comparison */}
+        {goalTotal > 0 && (
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Target className="h-5 w-5 text-red-500" />
+                Goal Comparison
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Compare your current performance with your meet goals
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-white">Current</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Total:</span>
+                      <span className="font-medium text-white">
+                        {currentTotal} lbs
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Wilks:</span>
+                      <span className="font-medium text-white">
+                        {wilksScore.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">DOTS:</span>
+                      <span className="font-medium text-white">
+                        {dotsScore.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-white">Goal</h4>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Total:</span>
+                      <span className="font-medium text-white">
+                        {goalTotal} lbs
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Wilks:</span>
+                      <span className="font-medium text-white">
+                        {goalWilks.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">DOTS:</span>
+                      <span className="font-medium text-white">
+                        {goalDOTS.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="text-xs text-gray-600">Squat (lbs)</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-green-600">
-                {calculatorInputs.bench}
-              </div>
-              <div className="text-xs text-gray-600">Bench (lbs)</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-red-600">
-                {calculatorInputs.deadlift}
-              </div>
-              <div className="text-xs text-gray-600">Deadlift (lbs)</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Strength Standards Reference */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Strength Standards Reference</CardTitle>
-          <CardDescription>
-            General Wilks score ranges for different strength levels
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <div className="text-center p-2 bg-gray-100 rounded">
-              <div className="text-sm font-medium">Beginner</div>
-              <div className="text-xs text-gray-600">&lt; 200</div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Progress to Goal</span>
+                  <span className="text-white">
+                    {((currentTotal / goalTotal) * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <Progress
+                  value={(currentTotal / goalTotal) * 100}
+                  className="h-2"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Lift Distribution */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <TrendingUp className="h-5 w-5 text-blue-500" />
+              Lift Distribution
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Breakdown of your total across the three lifts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">Squat</span>
+                <span className="text-sm text-gray-400">
+                  {liftDistribution.squat.toFixed(1)}%
+                </span>
+              </div>
+              <Progress value={liftDistribution.squat} className="h-2" />
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">
+                  Bench Press
+                </span>
+                <span className="text-sm text-gray-400">
+                  {liftDistribution.bench.toFixed(1)}%
+                </span>
+              </div>
+              <Progress value={liftDistribution.bench} className="h-2" />
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">Deadlift</span>
+                <span className="text-sm text-gray-400">
+                  {liftDistribution.deadlift.toFixed(1)}%
+                </span>
+              </div>
+              <Progress value={liftDistribution.deadlift} className="h-2" />
             </div>
-            <div className="text-center p-2 bg-yellow-100 rounded">
-              <div className="text-sm font-medium">Novice</div>
-              <div className="text-xs text-gray-600">200-300</div>
+
+            <Separator />
+
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-lg font-bold text-blue-400">
+                  {calculatorInputs.squat}
+                </div>
+                <div className="text-xs text-gray-400">Squat (lbs)</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-green-400">
+                  {calculatorInputs.bench}
+                </div>
+                <div className="text-xs text-gray-400">Bench (lbs)</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-red-400">
+                  {calculatorInputs.deadlift}
+                </div>
+                <div className="text-xs text-gray-400">Deadlift (lbs)</div>
+              </div>
             </div>
-            <div className="text-center p-2 bg-green-100 rounded">
-              <div className="text-sm font-medium">Intermediate</div>
-              <div className="text-xs text-gray-600">300-400</div>
+          </CardContent>
+        </Card>
+
+        {/* Strength Standards Reference */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white">
+              Strength Standards Reference
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              General Wilks score ranges for different strength levels
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              <div className="text-center p-2 bg-gray-700 rounded border border-gray-600">
+                <div className="text-sm font-medium text-white">Beginner</div>
+                <div className="text-xs text-gray-400">&lt; 200</div>
+              </div>
+              <div className="text-center p-2 bg-yellow-900/30 rounded border border-yellow-500/30">
+                <div className="text-sm font-medium text-white">Novice</div>
+                <div className="text-xs text-gray-400">200-300</div>
+              </div>
+              <div className="text-center p-2 bg-green-900/30 rounded border border-green-500/30">
+                <div className="text-sm font-medium text-white">
+                  Intermediate
+                </div>
+                <div className="text-xs text-gray-400">300-400</div>
+              </div>
+              <div className="text-center p-2 bg-blue-900/30 rounded border border-blue-500/30">
+                <div className="text-sm font-medium text-white">Advanced</div>
+                <div className="text-xs text-gray-400">400-500</div>
+              </div>
+              <div className="text-center p-2 bg-purple-900/30 rounded border border-purple-500/30">
+                <div className="text-sm font-medium text-white">Elite</div>
+                <div className="text-xs text-gray-400">500+</div>
+              </div>
             </div>
-            <div className="text-center p-2 bg-blue-100 rounded">
-              <div className="text-sm font-medium">Advanced</div>
-              <div className="text-xs text-gray-600">400-500</div>
-            </div>
-            <div className="text-center p-2 bg-purple-100 rounded">
-              <div className="text-sm font-medium">Elite</div>
-              <div className="text-xs text-gray-600">500+</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

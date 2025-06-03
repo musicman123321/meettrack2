@@ -12,6 +12,7 @@ import {
   HelpCircle,
   Dumbbell,
 } from "lucide-react";
+import { usePowerlifting } from "@/contexts/PowerliftingContext";
 
 interface NavItem {
   icon: React.ReactNode;
@@ -41,6 +42,20 @@ const Sidebar = ({
   activeItem = "dashboard",
   onItemClick = () => {},
 }: SidebarProps) => {
+  const { state, getDaysUntilMeet } = usePowerlifting();
+
+  const daysUntilMeet = getDaysUntilMeet();
+  const currentTotal =
+    state.currentStats.squatMax +
+    state.currentStats.benchMax +
+    state.currentStats.deadliftMax;
+  const completedEquipment = state.equipmentChecklist.filter(
+    (item) => item.checked,
+  ).length;
+  const equipmentProgress = Math.round(
+    (completedEquipment / state.equipmentChecklist.length) * 100,
+  );
+
   return (
     <div className="w-[240px] h-full border-r border-gray-700 bg-gray-800 flex flex-col">
       <div className="p-4">
@@ -81,15 +96,19 @@ const Sidebar = ({
           <div className="px-3 py-2 text-xs text-gray-400">
             <div className="flex justify-between mb-1">
               <span>Days to Meet:</span>
-              <span className="text-red-400 font-medium">--</span>
+              <span className="text-red-400 font-medium">{daysUntilMeet}</span>
             </div>
             <div className="flex justify-between mb-1">
               <span>Current Total:</span>
-              <span className="text-blue-400 font-medium">-- kg</span>
+              <span className="text-blue-400 font-medium">
+                {currentTotal}kg
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Equipment Ready:</span>
-              <span className="text-green-400 font-medium">--%</span>
+              <span className="text-green-400 font-medium">
+                {equipmentProgress}%
+              </span>
             </div>
           </div>
         </div>
