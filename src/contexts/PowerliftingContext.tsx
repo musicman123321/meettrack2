@@ -415,32 +415,52 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   // Save current stats to Supabase
   const saveCurrentStats = async (stats: CurrentStats) => {
-    if (!user?.id) {
-      errorLog("No user found when saving current stats", null);
-      return;
-    }
+  if (!user?.id) {
+    errorLog("No user found when saving current stats", null);
+    return;
+  }
 
-    try {
-      debugLog("Saving current stats:", stats);
-      const { error } = await supabase.from("current_stats").upsert({
-        user_id: user.id,
+  try {
+    debugLog("Saving current stats:", stats);
+    
+    // First try to update existing record
+    const { error: updateError } = await supabase
+      .from("current_stats")
+      .update({
         weight: stats.weight,
         squat_max: stats.squatMax,
         bench_max: stats.benchMax,
         deadlift_max: stats.deadliftMax,
         updated_at: new Date().toISOString(),
-      });
+      })
+      .eq('user_id', user.id);
 
-      if (error) {
-        throw new Error(`Failed to save current stats: ${error.message}`);
-      }
+    // If no record exists, insert a new one
+    if (updateError?.code === 'PGRST116') { // No rows affected
+      const { error: insertError } = await supabase
+        .from("current_stats")
+        .insert({
+          user_id: user.id,
+          weight: stats.weight,
+          squat_max: stats.squatMax,
+          bench_max: stats.benchMax,
+          deadlift_max: stats.deadliftMax,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
 
-      debugLog("Successfully saved current stats");
-      dispatch({ type: "SET_CURRENT_STATS", payload: stats });
-    } catch (err: any) {
-      errorLog("Error saving current stats", err);
+      if (insertError) throw insertError;
+    } else if (updateError) {
+      throw updateError;
     }
-  };
+
+    debugLog("Successfully saved current stats");
+    dispatch({ type: "SET_CURRENT_STATS", payload: stats });
+  } catch (err: any) {
+    errorLog("Error saving current stats", err);
+    throw err; // Re-throw to handle in calling function
+  }
+};
 
   // Save meet goals to Supabase
   const saveMeetGoals = async (goals: MeetGoals) => {
