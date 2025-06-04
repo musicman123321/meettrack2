@@ -9,6 +9,186 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      current_stats: {
+        Row: {
+          bench_max: number | null
+          created_at: string
+          deadlift_max: number | null
+          id: number
+          squat_max: number | null
+          updated_at: string | null
+          user_id: string | null
+          weight: number | null
+        }
+        Insert: {
+          bench_max?: number | null
+          created_at?: string
+          deadlift_max?: number | null
+          id?: number
+          squat_max?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          weight?: number | null
+        }
+        Update: {
+          bench_max?: number | null
+          created_at?: string
+          deadlift_max?: number | null
+          id?: number
+          squat_max?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "current_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_checklist: {
+        Row: {
+          category: Database["public"]["Enums"]["category"] | null
+          checked: boolean | null
+          created_at: string
+          custom_item: string | null
+          id: number
+          name: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["category"] | null
+          checked?: boolean | null
+          created_at?: string
+          custom_item?: string | null
+          id?: number
+          name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["category"] | null
+          checked?: boolean | null
+          created_at?: string
+          custom_item?: string | null
+          id?: number
+          name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_checklist_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meet_goals: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          id: number
+          lift_type: Database["public"]["Enums"]["lifts"] | null
+          meet_id: number | null
+          opener: number | null
+          second: number | null
+          third: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          lift_type?: Database["public"]["Enums"]["lifts"] | null
+          meet_id?: number | null
+          opener?: number | null
+          second?: number | null
+          third?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          lift_type?: Database["public"]["Enums"]["lifts"] | null
+          meet_id?: number | null
+          opener?: number | null
+          second?: number | null
+          third?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meet_goals_meet_id_fkey"
+            columns: ["meet_id"]
+            isOneToOne: false
+            referencedRelation: "meets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meet_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meets: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean | null
+          location: string | null
+          meet_date: string | null
+          meet_name: string | null
+          target_weight_class: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean | null
+          location?: string | null
+          meet_date?: string | null
+          meet_name?: string | null
+          target_weight_class?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean | null
+          location?: string | null
+          meet_date?: string | null
+          meet_name?: string | null
+          target_weight_class?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           amount: number | null
@@ -96,6 +276,7 @@ export type Database = {
           credits: string | null
           email: string | null
           full_name: string | null
+          gender: Database["public"]["Enums"]["gender"] | null
           id: string
           image: string | null
           name: string | null
@@ -110,6 +291,7 @@ export type Database = {
           credits?: string | null
           email?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
           id: string
           image?: string | null
           name?: string | null
@@ -124,6 +306,7 @@ export type Database = {
           credits?: string | null
           email?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           image?: string | null
           name?: string | null
@@ -167,6 +350,38 @@ export type Database = {
         }
         Relationships: []
       }
+      weight_history: {
+        Row: {
+          created_at: string
+          date: string | null
+          id: number
+          user_id: string | null
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string
+          date?: string | null
+          id?: number
+          user_id?: string | null
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string
+          date?: string | null
+          id?: number
+          user_id?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weight_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -175,7 +390,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      category: "essential" | "optional" | "meet-day"
+      gender: "Male" | "Female" | "Other"
+      lifts: "squat" | "bench" | "deadlift"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -290,6 +507,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      category: ["essential", "optional", "meet-day"],
+      gender: ["Male", "Female", "Other"],
+      lifts: ["squat", "bench", "deadlift"],
+    },
   },
 } as const

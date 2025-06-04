@@ -17,6 +17,7 @@ import {
 } from "../types/powerlifting";
 import { supabase } from "../../supabase/supabase";
 import { useAuth } from "../../supabase/auth";
+import type { Database } from "../types/supabase";
 
 type PowerliftingAction =
   | { type: "SET_MEET_INFO"; payload: MeetInfo }
@@ -152,40 +153,50 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       debugLog("Fetching user data for user:", user.id);
 
       // Fetch current stats
+      debugLog("Fetching current stats...");
       const { data: currentStatsData, error: statsError } = await supabase
         .from("current_stats")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (statsError && statsError.code !== "PGRST116") {
+      if (statsError) {
+        errorLog("Error fetching current stats", statsError);
         throw new Error(`Failed to fetch current stats: ${statsError.message}`);
       }
+      debugLog("Current stats fetched:", currentStatsData);
 
       // Fetch active meet
+      debugLog("Fetching active meet...");
       const { data: meetData, error: meetError } = await supabase
         .from("meets")
         .select("*")
         .eq("user_id", user.id)
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
 
-      if (meetError && meetError.code !== "PGRST116") {
+      if (meetError) {
+        errorLog("Error fetching meet data", meetError);
         throw new Error(`Failed to fetch meet data: ${meetError.message}`);
       }
+      debugLog("Meet data fetched:", meetData);
 
       // Fetch meet goals
+      debugLog("Fetching meet goals...");
       const { data: meetGoalsData, error: goalsError } = await supabase
         .from("meet_goals")
         .select("*")
         .eq("user_id", user.id)
-        .eq("meet_id", meetData?.id || null);
+        .eq("meet_id", meetData?.id || "00000000-0000-0000-0000-000000000000");
 
       if (goalsError) {
+        errorLog("Error fetching meet goals", goalsError);
         throw new Error(`Failed to fetch meet goals: ${goalsError.message}`);
       }
+      debugLog("Meet goals fetched:", meetGoalsData);
 
       // Fetch weight history
+      debugLog("Fetching weight history...");
       const { data: weightHistoryData, error: weightError } = await supabase
         .from("weight_history")
         .select("*")
@@ -194,21 +205,38 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         .limit(30);
 
       if (weightError) {
+        errorLog("Error fetching weight history", weightError);
         throw new Error(
           `Failed to fetch weight history: ${weightError.message}`,
         );
       }
+      debugLog("Weight history fetched:", weightHistoryData);
 
       // Fetch equipment checklist
+      debugLog("Fetching equipment checklist...");
       const { data: equipmentData, error: equipmentError } = await supabase
         .from("equipment_checklist")
         .select("*")
         .eq("user_id", user.id);
 
       if (equipmentError) {
+        errorLog("Error fetching equipment checklist", equipmentError);
         throw new Error(
           `Failed to fetch equipment checklist: ${equipmentError.message}`,
         );
+      }
+      debugLog("Equipment checklist fetched:", equipmentData);
+
+      // Initialize default equipment if none exists
+      if (!equipmentData || equipmentData.length === 0) {
+        debugLog("No equipment found, initializing defaults...");
+        await initializeDefaultEquipment();
+        // Refetch equipment after initialization
+        const { data: newEquipmentData } = await supabase
+          .from("equipment_checklist")
+          .select("*")
+          .eq("user_id", user.id);
+        debugLog("Default equipment initialized:", newEquipmentData);
       }
 
       // Transform and set data
@@ -275,7 +303,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   // Transform equipment from database format
   const transformEquipmentFromDB = (equipmentData: any[]): EquipmentItem[] => {
     return equipmentData.map((item) => ({
-      id: item.id.toString(),
+      id: item.id,
       name: item.name,
       checked: item.checked,
       category: item.category,
@@ -540,7 +568,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase
         .from("equipment_checklist")
         .update({ checked: !item.checked })
-        .eq("id", parseInt(itemId))
+        .eq("id", itemId)
         .eq("user_id", user.id);
 
       if (error) {

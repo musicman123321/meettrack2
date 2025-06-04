@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -12,27 +12,49 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Calculator, TrendingUp, Target, Award } from "lucide-react";
+import {
+  Calculator,
+  TrendingUp,
+  Target,
+  Award,
+  AlertCircle,
+} from "lucide-react";
 import { usePowerlifting } from "@/contexts/PowerliftingContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AnalyticsProps {
   className?: string;
 }
 
 const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
-  const { state } = usePowerlifting();
+  const { state, loading, error, refreshData } = usePowerlifting();
   const { currentStats, meetGoals } = state;
+
+  // Refresh data when component mounts
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   // Convert kg to lbs for display (1 kg = 2.20462 lbs)
   const kgToLbs = (kg: number) => Math.round(kg * 2.20462 * 100) / 100;
   const lbsToKg = (lbs: number) => Math.round((lbs / 2.20462) * 100) / 100;
 
   const [calculatorInputs, setCalculatorInputs] = React.useState({
-    bodyweight: kgToLbs(currentStats.weight || 0),
-    squat: kgToLbs(currentStats.squatMax || 0),
-    bench: kgToLbs(currentStats.benchMax || 0),
-    deadlift: kgToLbs(currentStats.deadliftMax || 0),
+    bodyweight: 0,
+    squat: 0,
+    bench: 0,
+    deadlift: 0,
   });
+
+  // Update calculator inputs when currentStats change
+  useEffect(() => {
+    setCalculatorInputs({
+      bodyweight: kgToLbs(currentStats.weight || 0),
+      squat: kgToLbs(currentStats.squatMax || 0),
+      bench: kgToLbs(currentStats.benchMax || 0),
+      deadlift: kgToLbs(currentStats.deadliftMax || 0),
+    });
+  }, [currentStats]);
 
   // Calculate Wilks Score
   const calculateWilks = (
@@ -145,6 +167,29 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
     });
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div
+        className={`min-h-screen bg-gray-900 text-white p-4 md:p-6 ${className}`}
+      >
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Calculator className="h-6 w-6 text-blue-400" />
+            <h2 className="text-2xl font-bold text-white">
+              Analytics & Calculators
+            </h2>
+          </div>
+          <div className="text-center py-8">
+            <div className="text-lg text-gray-400">
+              Loading analytics data...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen bg-gray-900 text-white p-4 md:p-6 ${className}`}
@@ -156,6 +201,24 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
             Analytics & Calculators
           </h2>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert className="bg-red-900/20 border-red-500/50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-red-200">
+              Error loading data: {error}
+              <Button
+                onClick={refreshData}
+                variant="outline"
+                size="sm"
+                className="ml-2 h-6 px-2 text-xs"
+              >
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Score Calculator */}
         <Card className="bg-gray-800 border-gray-700">
