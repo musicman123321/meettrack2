@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,11 +9,46 @@ import { usePowerlifting } from "../../contexts/PowerliftingContext";
 import { EquipmentItem } from "../../types/powerlifting";
 
 export default function EquipmentChecklist() {
-  const { state, dispatch } = usePowerlifting();
+  const { state, loading, error, toggleEquipmentItem } = usePowerlifting();
+  const [updating, setUpdating] = useState<string | null>(null);
 
-  const toggleEquipment = (id: string) => {
-    dispatch({ type: "TOGGLE_EQUIPMENT", payload: id });
+  const handleToggleEquipment = async (id: string) => {
+    setUpdating(id);
+    try {
+      await toggleEquipmentItem(id);
+    } catch (error) {
+      console.error("Error toggling equipment:", error);
+    } finally {
+      setUpdating(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading equipment checklist...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">Error loading data: {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const getEquipmentByCategory = (category: string) => {
     return state.equipmentChecklist.filter(
@@ -106,14 +141,17 @@ export default function EquipmentChecklist() {
               {items.map((item) => (
                 <motion.div
                   key={item.id}
-                  className="flex items-center space-x-3 p-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors cursor-pointer"
-                  onClick={() => toggleEquipment(item.id)}
+                  className={`flex items-center space-x-3 p-3 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors cursor-pointer ${
+                    updating === item.id ? "opacity-50" : ""
+                  }`}
+                  onClick={() => handleToggleEquipment(item.id)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   <Checkbox
                     checked={item.checked}
-                    onCheckedChange={() => toggleEquipment(item.id)}
+                    disabled={updating === item.id}
+                    onCheckedChange={() => handleToggleEquipment(item.id)}
                     className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
                   />
                   <label

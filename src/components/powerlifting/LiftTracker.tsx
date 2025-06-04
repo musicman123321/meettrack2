@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,45 @@ import { usePowerlifting } from "../../contexts/PowerliftingContext";
 import { toast } from "@/components/ui/use-toast";
 
 export default function LiftTracker() {
-  const { state, dispatch } = usePowerlifting();
+  const { state, loading, error, saveCurrentStats, saveMeetGoals } =
+    usePowerlifting();
   const [activeTab, setActiveTab] = useState("squat");
   const [tempStats, setTempStats] = useState(state.currentStats);
   const [tempGoals, setTempGoals] = useState(state.meetGoals);
+  const [saving, setSaving] = useState(false);
+
+  // Update temp state when context state changes
+  useEffect(() => {
+    setTempStats(state.currentStats);
+    setTempGoals(state.meetGoals);
+  }, [state.currentStats, state.meetGoals]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading your lift data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">Error loading data: {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const liftIcons = {
     squat: <Target className="h-5 w-5" />,
@@ -88,13 +123,26 @@ export default function LiftTracker() {
     setTempGoals(newGoals);
   };
 
-  const saveChanges = () => {
-    dispatch({ type: "SET_CURRENT_STATS", payload: tempStats });
-    dispatch({ type: "SET_MEET_GOALS", payload: tempGoals });
-    toast({
-      title: "Changes saved!",
-      description: "Your lift data has been updated.",
-    });
+  const saveChanges = async () => {
+    setSaving(true);
+    try {
+      await Promise.all([
+        saveCurrentStats(tempStats),
+        saveMeetGoals(tempGoals),
+      ]);
+      toast({
+        title: "Changes saved!",
+        description: "Your lift data has been updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error saving changes",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderLiftTab = (lift: "squat" | "bench" | "deadlift") => {
@@ -311,10 +359,11 @@ export default function LiftTracker() {
         <div className="mt-8 flex justify-end">
           <Button
             onClick={saveChanges}
+            disabled={saving}
             className="bg-green-600 hover:bg-green-700"
           >
             <Save className="h-4 w-4 mr-2" />
-            Save Changes
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>

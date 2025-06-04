@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,52 @@ import { WEIGHT_CLASSES } from "../../types/powerlifting";
 import { toast } from "@/components/ui/use-toast";
 
 export default function WeightManagement() {
-  const { state, dispatch, getDaysUntilMeet } = usePowerlifting();
+  const {
+    state,
+    loading,
+    error,
+    getDaysUntilMeet,
+    addWeightEntry,
+    saveMeetInfo,
+    saveCurrentStats,
+  } = usePowerlifting();
   const [newWeight, setNewWeight] = useState("");
   const [selectedWeightClass, setSelectedWeightClass] = useState(
     state.meetInfo.targetWeightClass.toString(),
   );
+  const [saving, setSaving] = useState(false);
+
+  // Update selected weight class when state changes
+  useEffect(() => {
+    setSelectedWeightClass(state.meetInfo.targetWeightClass.toString());
+  }, [state.meetInfo.targetWeightClass]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading weight management data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">Error loading data: {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const daysUntilMeet = getDaysUntilMeet();
   const currentWeight = state.currentStats.weight;
@@ -37,7 +78,7 @@ export default function WeightManagement() {
       ? recentWeights[0].weight - recentWeights[recentWeights.length - 1].weight
       : 0;
 
-  const addWeightEntry = () => {
+  const handleAddWeightEntry = async () => {
     if (!newWeight || parseFloat(newWeight) <= 0) {
       toast({
         title: "Invalid weight",
@@ -47,34 +88,57 @@ export default function WeightManagement() {
       return;
     }
 
-    const weightEntry = {
-      date: new Date().toISOString().split("T")[0],
-      weight: parseFloat(newWeight),
-    };
+    setSaving(true);
+    try {
+      const weightEntry = {
+        date: new Date().toISOString().split("T")[0],
+        weight: parseFloat(newWeight),
+      };
 
-    dispatch({ type: "ADD_WEIGHT_ENTRY", payload: weightEntry });
-    dispatch({
-      type: "SET_CURRENT_STATS",
-      payload: { ...state.currentStats, weight: parseFloat(newWeight) },
-    });
+      await addWeightEntry(weightEntry);
+      await saveCurrentStats({
+        ...state.currentStats,
+        weight: parseFloat(newWeight),
+      });
 
-    setNewWeight("");
-    toast({
-      title: "Weight logged!",
-      description: `Weight of ${newWeight}kg has been recorded.`,
-    });
+      setNewWeight("");
+      toast({
+        title: "Weight logged!",
+        description: `Weight of ${newWeight}kg has been recorded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error logging weight",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const updateWeightClass = () => {
-    const newWeightClass = parseFloat(selectedWeightClass);
-    dispatch({
-      type: "SET_MEET_INFO",
-      payload: { ...state.meetInfo, targetWeightClass: newWeightClass },
-    });
-    toast({
-      title: "Weight class updated!",
-      description: `Target weight class set to ${newWeightClass}kg.`,
-    });
+  const updateWeightClass = async () => {
+    setSaving(true);
+    try {
+      const newWeightClass = parseFloat(selectedWeightClass);
+      const updatedMeetInfo = {
+        ...state.meetInfo,
+        targetWeightClass: newWeightClass,
+      };
+      await saveMeetInfo(updatedMeetInfo);
+      toast({
+        title: "Weight class updated!",
+        description: `Target weight class set to ${newWeightClass}kg.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating weight class",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getWeightStatus = () => {
@@ -222,11 +286,12 @@ export default function WeightManagement() {
                 </div>
                 <div className="flex items-end">
                   <Button
-                    onClick={addWeightEntry}
+                    onClick={handleAddWeightEntry}
+                    disabled={saving}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Add
+                    {saving ? "Adding..." : "Add"}
                   </Button>
                 </div>
               </div>
@@ -288,9 +353,10 @@ export default function WeightManagement() {
 
               <Button
                 onClick={updateWeightClass}
+                disabled={saving}
                 className="w-full bg-green-600 hover:bg-green-700"
               >
-                Update Weight Class
+                {saving ? "Updating..." : "Update Weight Class"}
               </Button>
 
               {/* Cutting Recommendations */}

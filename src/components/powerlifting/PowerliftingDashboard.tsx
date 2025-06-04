@@ -16,7 +16,35 @@ import LiftCard from "./LiftCard";
 import AnimatedProgressBar from "./AnimatedProgressBar";
 
 export default function PowerliftingDashboard() {
-  const { state, getDaysUntilMeet, calculateWilks } = usePowerlifting();
+  const { state, loading, error, getDaysUntilMeet, calculateWilks } =
+    usePowerlifting();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading your powerlifting data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">Error loading data: {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const daysUntilMeet = getDaysUntilMeet();
   const totalLifts =
