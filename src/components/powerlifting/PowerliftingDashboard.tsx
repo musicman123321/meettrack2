@@ -40,6 +40,7 @@ export default function PowerliftingDashboard() {
     calculateWilks,
     addWeightEntry,
     saveCurrentStats,
+    formatWeight,
   } = usePowerlifting();
 
   const [quickWeightOpen, setQuickWeightOpen] = useState(false);
@@ -260,7 +261,7 @@ export default function PowerliftingDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">
-                {totalLifts}kg
+                {formatWeight(totalLifts)}
               </div>
               <p className="text-xs text-gray-500 mt-1">Wilks: {wilksScore}</p>
             </CardContent>
@@ -283,10 +284,10 @@ export default function PowerliftingDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">
-                {state.currentStats.weight}kg
+                {formatWeight(state.currentStats.weight)}
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Target: {state.meetInfo.targetWeightClass}kg class
+                Target: {formatWeight(state.meetInfo.targetWeightClass)} class
               </p>
               <p className="text-xs text-blue-400 mt-1">Click to log weight</p>
             </CardContent>

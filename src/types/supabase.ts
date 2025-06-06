@@ -238,6 +238,36 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          dashboard_start_tab: string | null
+          id: string
+          theme: string | null
+          updated_at: string
+          user_id: string
+          weight_unit: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard_start_tab?: string | null
+          id?: string
+          theme?: string | null
+          updated_at?: string
+          user_id: string
+          weight_unit?: string
+        }
+        Update: {
+          created_at?: string
+          dashboard_start_tab?: string | null
+          id?: string
+          theme?: string | null
+          updated_at?: string
+          user_id?: string
+          weight_unit?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar_url: string | null

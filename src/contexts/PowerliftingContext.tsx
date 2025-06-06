@@ -13,6 +13,7 @@ import {
   MeetGoals,
   EquipmentItem,
   WeightEntry,
+  UserSettings,
   DEFAULT_EQUIPMENT,
 } from "../types/powerlifting";
 import { supabase } from "../../supabase/supabase";
@@ -30,6 +31,7 @@ type PowerliftingAction =
   | { type: "TOGGLE_EQUIPMENT"; payload: string }
   | { type: "ADD_WEIGHT_ENTRY"; payload: WeightEntry }
   | { type: "SET_UNIT_PREFERENCE"; payload: "kg" | "lbs" }
+  | { type: "SET_USER_SETTINGS"; payload: UserSettings }
   | { type: "LOAD_STATE"; payload: PowerliftingState };
 
 const initialState: PowerliftingState = {
@@ -93,6 +95,12 @@ function powerliftingReducer(
         ...state,
         unitPreference: action.payload,
       };
+    case "SET_USER_SETTINGS":
+      return {
+        ...state,
+        userSettings: action.payload,
+        unitPreference: action.payload.weight_unit,
+      };
     case "LOAD_STATE":
       return action.payload;
     default:
@@ -125,6 +133,7 @@ interface PowerliftingContextType {
   toggleEquipmentItem: (itemId: string) => Promise<void>;
   updateCurrentWeight: (weight: number) => Promise<void>;
   updateUnitPreference: (unit: "kg" | "lbs") => Promise<void>;
+  saveUserSettings: (settings: Partial<UserSettings>) => Promise<void>;
   convertWeight: (
     weight: number,
     fromUnit?: "kg" | "lbs",
@@ -167,18 +176,41 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       setError(null);
       debugLog("Fetching user data for user:", user.id);
 
-      // Fetch user profile for unit preference
-      debugLog("Fetching user profile...");
-      const { data: userProfile, error: profileError } = await supabase
-        .from("users")
-        .select("unit_preference")
+      // Fetch user settings
+      debugLog("Fetching user settings...");
+      const { data: userSettings, error: settingsError } = await supabase
+        .from("user_settings")
+        .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (profileError && profileError.code !== "PGRST116") {
-        errorLog("Error fetching user profile", profileError);
+      if (settingsError && settingsError.code !== "PGRST116") {
+        errorLog("Error fetching user settings", settingsError);
       }
-      debugLog("User profile fetched:", userProfile);
+      debugLog("User settings fetched:", userSettings);
+
+      // Initialize default settings if none exist
+      if (!userSettings) {
+        debugLog("No user settings found, creating defaults...");
+        const defaultSettings: Partial<UserSettings> = {
+          user_id: user.id,
+          weight_unit: "kg",
+          theme: "dark",
+          dashboard_start_tab: "dashboard",
+        };
+
+        const { data: newSettings, error: createError } = await supabase
+          .from("user_settings")
+          .insert(defaultSettings)
+          .select()
+          .single();
+
+        if (createError) {
+          errorLog("Error creating default settings", createError);
+        } else {
+          debugLog("Default settings created:", newSettings);
+        }
+      }
 
       // Fetch current stats
       debugLog("Fetching current stats...");
@@ -295,7 +327,8 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
             date: entry.date,
             weight: entry.weight,
           })) || [],
-        unitPreference: (userProfile?.unit_preference as "kg" | "lbs") || "kg",
+        unitPreference: userSettings?.weight_unit || "kg",
+        userSettings: userSettings || undefined,
       };
 
       debugLog("Successfully fetched user data:", newState);
@@ -655,30 +688,61 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Update unit preference
+  // Update unit preference (legacy method - now uses saveUserSettings)
   const updateUnitPreference = async (unit: "kg" | "lbs") => {
+    await saveUserSettings({ weight_unit: unit });
+  };
+
+  // Save user settings with optimistic updates and visual feedback
+  const saveUserSettings = async (settings: Partial<UserSettings>) => {
     if (!user?.id) {
-      errorLog("No user found when updating unit preference", null);
+      errorLog("No user found when saving user settings", null);
       return;
     }
 
     try {
-      debugLog("Updating unit preference:", unit);
+      debugLog("Saving user settings:", settings);
+
+      // Optimistic update for immediate UI feedback
+      const currentSettings = state.userSettings || {
+        user_id: user.id,
+        weight_unit: "kg" as const,
+        theme: "dark" as const,
+        dashboard_start_tab: "dashboard",
+      };
+
+      const updatedSettings = { ...currentSettings, ...settings };
+      dispatch({ type: "SET_USER_SETTINGS", payload: updatedSettings });
 
       // Update in database
-      const { error } = await supabase
-        .from("users")
-        .update({ unit_preference: unit })
-        .eq("user_id", user.id);
+      const { data, error } = await supabase
+        .from("user_settings")
+        .upsert(
+          {
+            user_id: user.id,
+            ...settings,
+          },
+          {
+            onConflict: "user_id",
+          },
+        )
+        .select()
+        .single();
 
       if (error) {
-        throw new Error(`Failed to update unit preference: ${error.message}`);
+        // Revert optimistic update on error
+        dispatch({ type: "SET_USER_SETTINGS", payload: currentSettings });
+        throw new Error(`Failed to save user settings: ${error.message}`);
       }
 
-      debugLog("Successfully updated unit preference");
-      dispatch({ type: "SET_UNIT_PREFERENCE", payload: unit });
+      // Update with server response
+      if (data) {
+        dispatch({ type: "SET_USER_SETTINGS", payload: data });
+      }
+
+      debugLog("Successfully saved user settings");
     } catch (err: any) {
-      errorLog("Error updating unit preference", err);
+      errorLog("Error saving user settings", err);
       throw err;
     }
   };
@@ -734,6 +798,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         toggleEquipmentItem,
         updateCurrentWeight,
         updateUnitPreference,
+        saveUserSettings,
         convertWeight,
         formatWeight,
       }}
