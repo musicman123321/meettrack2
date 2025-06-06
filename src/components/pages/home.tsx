@@ -24,6 +24,7 @@ import {
   Heart,
   DollarSign,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "../../../supabase/auth";
 import { supabase } from "../../../supabase/supabase";
 import { toast } from "@/components/ui/use-toast";
@@ -33,6 +34,8 @@ function SupportDonation() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(5);
+  const [customAmount, setCustomAmount] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
 
   const donationAmounts = [5, 10, 25, 50];
 
@@ -76,48 +79,144 @@ function SupportDonation() {
     }
   };
 
+  const handleCustomAmountChange = (value: string) => {
+    setCustomAmount(value);
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue > 0) {
+      setSelectedAmount(numValue);
+    }
+  };
+
+  const getDonationAmount = () => {
+    if (showCustom && customAmount) {
+      const amount = parseFloat(customAmount);
+      return !isNaN(amount) && amount > 0 ? amount : selectedAmount;
+    }
+    return selectedAmount;
+  };
+
   return (
-    <Card className="bg-white border-gray-200 shadow-sm max-w-md mx-auto">
-      <CardHeader className="text-center">
-        <CardTitle className="flex items-center justify-center gap-2 text-gray-900">
-          <Heart className="h-5 w-5 text-red-500" />
-          Support Development
-        </CardTitle>
-        <CardDescription className="text-gray-600">
-          Choose an amount to support our work
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
-          {donationAmounts.map((amount) => (
+    <div className="w-full max-w-2xl mx-auto">
+      <Card className="bg-white border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="text-center pb-6">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center mb-4">
+            <Heart className="h-8 w-8 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
+            Support Our Development
+          </CardTitle>
+          <CardDescription className="text-gray-600 text-lg">
+            Help us continue improving Meet Prep Tracker with your contribution
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6 px-8 pb-8">
+          {/* Preset Amounts */}
+          <div className="space-y-3">
+            <h4 className="font-semibold text-gray-900 text-center">
+              Choose an amount
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {donationAmounts.map((amount) => (
+                <Button
+                  key={amount}
+                  variant={
+                    selectedAmount === amount && !showCustom
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => {
+                    setSelectedAmount(amount);
+                    setShowCustom(false);
+                    setCustomAmount("");
+                  }}
+                  className={
+                    selectedAmount === amount && !showCustom
+                      ? "bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-md"
+                      : "border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                  }
+                  size="lg"
+                >
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  {amount}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Amount Toggle */}
+          <div className="text-center">
             <Button
-              key={amount}
-              variant={selectedAmount === amount ? "default" : "outline"}
-              onClick={() => setSelectedAmount(amount)}
-              className={
-                selectedAmount === amount
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "border-gray-300 hover:bg-gray-50"
-              }
+              variant="ghost"
+              onClick={() => {
+                setShowCustom(!showCustom);
+                if (!showCustom) {
+                  setCustomAmount("");
+                }
+              }}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
-              <DollarSign className="h-4 w-4 mr-1" />
-              {amount}
+              {showCustom ? "Choose preset amount" : "Enter custom amount"}
             </Button>
-          ))}
-        </div>
-        <Button
-          onClick={() => handleDonation(selectedAmount)}
-          disabled={loading}
-          className="w-full bg-red-600 hover:bg-red-700 text-white"
-          size="lg"
-        >
-          {loading ? "Processing..." : `Donate ${selectedAmount}`}
-        </Button>
-        <p className="text-xs text-gray-500 text-center">
-          Secure payment powered by Polar.sh
-        </p>
-      </CardContent>
-    </Card>
+          </div>
+
+          {/* Custom Amount Input */}
+          {showCustom && (
+            <div className="space-y-2">
+              <Label
+                htmlFor="custom-amount"
+                className="text-gray-700 font-medium"
+              >
+                Custom Amount ($)
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="custom-amount"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={customAmount}
+                  onChange={(e) => handleCustomAmountChange(e.target.value)}
+                  placeholder="Enter amount"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Donation Button */}
+          <Button
+            onClick={() => handleDonation(getDonationAmount())}
+            disabled={
+              loading ||
+              (showCustom && (!customAmount || parseFloat(customAmount) <= 0))
+            }
+            className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            size="lg"
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Processing...
+              </div>
+            ) : (
+              `Donate ${getDonationAmount()}`
+            )}
+          </Button>
+
+          {/* Security Note */}
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-500">
+              🔒 Secure payment powered by Polar.sh
+            </p>
+            <p className="text-xs text-gray-400">
+              100% optional • Your support helps us maintain and improve the
+              platform
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -190,20 +289,20 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 text-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
+      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Dumbbell className="h-8 w-8 text-red-500" />
-              <h1 className="text-2xl font-bold text-gray-900">
+              <Dumbbell className="h-6 w-6 sm:h-8 sm:w-8 text-red-500" />
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
                 Meet Prep Tracker
               </h1>
             </div>
-            <nav className="flex items-center space-x-4">
+            <nav className="flex items-center space-x-2 sm:space-x-4">
               {user ? (
                 <Link to="/dashboard">
-                  <Button className="bg-red-600 hover:bg-red-700 text-white">
-                    Go to Dashboard
+                  <Button className="bg-red-600 hover:bg-red-700 text-white text-sm sm:text-base px-3 sm:px-4 py-2">
+                    Dashboard
                   </Button>
                 </Link>
               ) : (
@@ -211,13 +310,13 @@ export default function Home() {
                   <Link to="/login">
                     <Button
                       variant="ghost"
-                      className="text-gray-700 hover:bg-gray-100"
+                      className="text-gray-700 hover:bg-gray-100 text-sm sm:text-base px-3 sm:px-4 py-2"
                     >
                       Sign In
                     </Button>
                   </Link>
                   <Link to="/signup">
-                    <Button className="bg-red-600 hover:bg-red-700 text-white">
+                    <Button className="bg-red-600 hover:bg-red-700 text-white text-sm sm:text-base px-3 sm:px-4 py-2">
                       Get Started
                     </Button>
                   </Link>
@@ -228,46 +327,46 @@ export default function Home() {
         </div>
       </header>
       {/* Hero Section */}
-      <section className="py-20 px-4">
+      <section className="py-12 sm:py-20 px-4">
         <div className="container mx-auto text-center">
-          <Badge className="mb-4 bg-red-600 text-white hover:bg-red-700">
+          <Badge className="mb-4 bg-red-600 text-white hover:bg-red-700 text-xs sm:text-sm">
             For Powerlifters, By Powerlifters
           </Badge>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent leading-tight">
             Master Your Meet Prep
           </h1>
-          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
             The complete powerlifting competition preparation tool. Track your
             lifts, manage your weight cut, and ensure you're ready to dominate
             on meet day.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             {user ? (
               <Link to="/dashboard">
                 <Button
                   size="lg"
-                  className="bg-red-600 hover:bg-red-700 text-white text-lg px-8 py-4"
+                  className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
                 >
                   Open Dashboard
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
             ) : (
               <>
-                <Link to="/signup">
+                <Link to="/signup" className="w-full sm:w-auto">
                   <Button
                     size="lg"
-                    className="bg-red-600 hover:bg-red-700 text-white text-lg px-8 py-4"
+                    className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
                   >
                     Start Free Trial
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </Link>
-                <Link to="/login">
+                <Link to="/login" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-gray-300 hover:bg-gray-50 text-gray-700 text-lg px-8 py-4"
+                    className="border-gray-300 hover:bg-gray-50 text-gray-700 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
                   >
                     Sign In
                   </Button>
@@ -278,31 +377,31 @@ export default function Home() {
         </div>
       </section>
       {/* Features Section */}
-      <section className="py-20 px-4 bg-white">
+      <section className="py-12 sm:py-20 px-4 bg-white">
         <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 text-gray-900">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
               Everything You Need for Meet Success
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
               Comprehensive tools designed specifically for powerlifting
               competition preparation
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="bg-white border-gray-200 hover:border-gray-300 transition-colors shadow-sm hover:shadow-md"
+                className="bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md h-full"
               >
-                <CardHeader>
+                <CardHeader className="pb-4">
                   <div className="mb-4">{feature.icon}</div>
-                  <CardTitle className="text-gray-900">
+                  <CardTitle className="text-gray-900 text-lg sm:text-xl">
                     {feature.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-gray-600">
+                  <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed">
                     {feature.description}
                   </CardDescription>
                 </CardContent>
@@ -312,29 +411,32 @@ export default function Home() {
         </div>
       </section>
       {/* Testimonials Section */}
-      <section className="py-20 px-4 bg-gray-50">
+      <section className="py-12 sm:py-20 px-4 bg-gray-50">
         <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 text-gray-900">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
               Trusted by Powerlifters Worldwide
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-lg sm:text-xl text-gray-600">
               See what athletes and coaches are saying about Meet Prep Tracker
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="bg-white border-gray-200 shadow-sm">
-                <CardHeader>
+              <Card
+                key={index}
+                className="bg-white border-gray-200 shadow-sm h-full"
+              >
+                <CardHeader className="pb-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
                       {testimonial.name[0]}
                     </div>
                     <div>
-                      <CardTitle className="text-gray-900 text-base">
+                      <CardTitle className="text-gray-900 text-sm sm:text-base">
                         {testimonial.name}
                       </CardTitle>
-                      <CardDescription className="text-gray-600">
+                      <CardDescription className="text-gray-600 text-xs sm:text-sm">
                         {testimonial.role}
                       </CardDescription>
                     </div>
@@ -345,11 +447,13 @@ export default function Home() {
                     {[...Array(testimonial.rating)].map((_, i) => (
                       <Star
                         key={i}
-                        className="h-4 w-4 fill-yellow-500 text-yellow-500"
+                        className="h-3 w-3 sm:h-4 sm:w-4 fill-yellow-500 text-yellow-500"
                       />
                     ))}
                   </div>
-                  <p className="text-gray-700">{testimonial.content}</p>
+                  <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
+                    {testimonial.content}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -357,69 +461,68 @@ export default function Home() {
         </div>
       </section>
       {/* Support Section */}
-      <section className="py-20 px-4 bg-gray-100">
-        <div className="container mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6 text-gray-900">
-            Support Our Development
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Help us continue improving Meet Prep Tracker with an optional
-            donation. Every contribution helps us add new features and maintain
-            the platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <SupportDonation />
-            <p className="text-sm text-gray-500">
-              100% optional • Secure payment via Polar.sh
+      <section className="py-16 sm:py-20 px-4 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-gray-900">
+              Support Our Development
+            </h2>
+            <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Help us continue improving Meet Prep Tracker with an optional
+              donation. Every contribution helps us add new features, maintain
+              the platform, and keep it free for the powerlifting community.
             </p>
+          </div>
+          <div className="flex justify-center">
+            <SupportDonation />
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-red-600 to-orange-600">
+      <section className="py-12 sm:py-20 px-4 bg-gradient-to-r from-red-600 to-orange-600">
         <div className="container mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6 text-white">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-white leading-tight">
             Ready to Dominate Your Next Meet?
           </h2>
-          <p className="text-xl text-red-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-red-100 mb-8 max-w-2xl mx-auto leading-relaxed">
             Join thousands of powerlifters who trust Meet Prep Tracker for their
             competition preparation.
           </p>
           {user ? (
-            <Link to="/dashboard">
+            <Link to="/dashboard" className="inline-block">
               <Button
                 size="lg"
-                className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4 font-semibold"
+                className="bg-white text-red-600 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold"
               >
                 Go to Dashboard
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </Link>
           ) : (
-            <Link to="/signup">
+            <Link to="/signup" className="inline-block">
               <Button
                 size="lg"
-                className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4 font-semibold"
+                className="bg-white text-red-600 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold"
               >
                 Start Your Free Trial
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </Link>
           )}
         </div>
       </section>
       {/* Footer */}
-      <footer className="border-t border-gray-200 py-12 px-4 bg-white">
+      <footer className="border-t border-gray-200 py-8 sm:py-12 px-4 bg-white">
         <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <Dumbbell className="h-6 w-6 text-red-500" />
-              <span className="text-xl font-bold text-gray-900">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-2">
+              <Dumbbell className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" />
+              <span className="text-lg sm:text-xl font-bold text-gray-900">
                 Meet Prep Tracker
               </span>
             </div>
-            <div className="flex space-x-6 text-gray-600">
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-gray-600 text-sm sm:text-base">
               <a href="#" className="hover:text-gray-900 transition-colors">
                 Privacy
               </a>
@@ -431,7 +534,7 @@ export default function Home() {
               </a>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-200 text-center text-gray-600">
+          <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200 text-center text-gray-600 text-sm sm:text-base">
             <p>
               &copy; 2024 Meet Prep Tracker. Built for powerlifters, by
               powerlifters.

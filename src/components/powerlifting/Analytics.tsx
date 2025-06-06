@@ -35,9 +35,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
     refreshData();
   }, []);
 
-  // Convert kg to lbs for display (1 kg = 2.20462 lbs)
-  const kgToLbs = (kg: number) => Math.round(kg * 2.20462 * 100) / 100;
-  const lbsToKg = (lbs: number) => Math.round((lbs / 2.20462) * 100) / 100;
+  const { convertWeight, formatWeight } = usePowerlifting();
+  const { unitPreference } = state;
 
   const [calculatorInputs, setCalculatorInputs] = React.useState({
     bodyweight: 0,
@@ -49,12 +48,16 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
   // Update calculator inputs when currentStats change
   useEffect(() => {
     setCalculatorInputs({
-      bodyweight: kgToLbs(currentStats.weight || 0),
-      squat: kgToLbs(currentStats.squatMax || 0),
-      bench: kgToLbs(currentStats.benchMax || 0),
-      deadlift: kgToLbs(currentStats.deadliftMax || 0),
+      bodyweight: convertWeight(currentStats.weight || 0, "kg", unitPreference),
+      squat: convertWeight(currentStats.squatMax || 0, "kg", unitPreference),
+      bench: convertWeight(currentStats.benchMax || 0, "kg", unitPreference),
+      deadlift: convertWeight(
+        currentStats.deadliftMax || 0,
+        "kg",
+        unitPreference,
+      ),
     });
-  }, [currentStats]);
+  }, [currentStats, unitPreference, convertWeight]);
 
   // Calculate Wilks Score
   const calculateWilks = (
@@ -121,9 +124,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
   const currentTotal =
     calculatorInputs.squat + calculatorInputs.bench + calculatorInputs.deadlift;
   const goalTotal =
-    kgToLbs(meetGoals.squat?.third || 0) +
-    kgToLbs(meetGoals.bench?.third || 0) +
-    kgToLbs(meetGoals.deadlift?.third || 0);
+    convertWeight(meetGoals.squat?.third || 0, "kg", unitPreference) +
+    convertWeight(meetGoals.bench?.third || 0, "kg", unitPreference) +
+    convertWeight(meetGoals.deadlift?.third || 0, "kg", unitPreference);
   const wilksScore = calculateWilks(calculatorInputs.bodyweight, currentTotal);
   const dotsScore = calculateDOTS(calculatorInputs.bodyweight, currentTotal);
   const goalWilks = calculateWilks(calculatorInputs.bodyweight, goalTotal);
@@ -160,10 +163,14 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
 
   const loadCurrentStats = () => {
     setCalculatorInputs({
-      bodyweight: kgToLbs(currentStats.weight || 0),
-      squat: kgToLbs(currentStats.squatMax || 0),
-      bench: kgToLbs(currentStats.benchMax || 0),
-      deadlift: kgToLbs(currentStats.deadliftMax || 0),
+      bodyweight: convertWeight(currentStats.weight || 0, "kg", unitPreference),
+      squat: convertWeight(currentStats.squatMax || 0, "kg", unitPreference),
+      bench: convertWeight(currentStats.benchMax || 0, "kg", unitPreference),
+      deadlift: convertWeight(
+        currentStats.deadliftMax || 0,
+        "kg",
+        unitPreference,
+      ),
     });
   };
 
@@ -236,7 +243,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="bodyweight" className="text-gray-300">
-                  Bodyweight (lbs)
+                  Bodyweight ({unitPreference})
                 </Label>
                 <Input
                   id="bodyweight"
@@ -251,7 +258,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
               </div>
               <div>
                 <Label htmlFor="squat" className="text-gray-300">
-                  Squat (lbs)
+                  Squat ({unitPreference})
                 </Label>
                 <Input
                   id="squat"
@@ -264,7 +271,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
               </div>
               <div>
                 <Label htmlFor="bench" className="text-gray-300">
-                  Bench (lbs)
+                  Bench ({unitPreference})
                 </Label>
                 <Input
                   id="bench"
@@ -277,7 +284,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
               </div>
               <div>
                 <Label htmlFor="deadlift" className="text-gray-300">
-                  Deadlift (lbs)
+                  Deadlift ({unitPreference})
                 </Label>
                 <Input
                   id="deadlift"
@@ -307,7 +314,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
                 <div className="text-2xl font-bold text-blue-400">
                   {currentTotal.toFixed(0)}
                 </div>
-                <div className="text-sm text-gray-400">Total (lbs)</div>
+                <div className="text-sm text-gray-400">
+                  Total ({unitPreference})
+                </div>
               </div>
               <div className="text-center p-4 bg-green-900/30 rounded-lg border border-green-500/30">
                 <div className="text-2xl font-bold text-green-400">
@@ -354,7 +363,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Total:</span>
                       <span className="font-medium text-white">
-                        {currentTotal} lbs
+                        {currentTotal} {unitPreference}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -377,7 +386,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Total:</span>
                       <span className="font-medium text-white">
-                        {goalTotal} lbs
+                        {goalTotal} {unitPreference}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -459,19 +468,25 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
                 <div className="text-lg font-bold text-blue-400">
                   {calculatorInputs.squat}
                 </div>
-                <div className="text-xs text-gray-400">Squat (lbs)</div>
+                <div className="text-xs text-gray-400">
+                  Squat ({unitPreference})
+                </div>
               </div>
               <div>
                 <div className="text-lg font-bold text-green-400">
                   {calculatorInputs.bench}
                 </div>
-                <div className="text-xs text-gray-400">Bench (lbs)</div>
+                <div className="text-xs text-gray-400">
+                  Bench ({unitPreference})
+                </div>
               </div>
               <div>
                 <div className="text-lg font-bold text-red-400">
                   {calculatorInputs.deadlift}
                 </div>
-                <div className="text-xs text-gray-400">Deadlift (lbs)</div>
+                <div className="text-xs text-gray-400">
+                  Deadlift ({unitPreference})
+                </div>
               </div>
             </div>
           </CardContent>
