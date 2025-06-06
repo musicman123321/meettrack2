@@ -6,10 +6,21 @@ import LiftTracker from "../powerlifting/LiftTracker";
 import WeightManagement from "../powerlifting/WeightManagement";
 import EquipmentChecklist from "../powerlifting/EquipmentChecklist";
 import Analytics from "../powerlifting/Analytics";
+import SettingsPage from "./SettingsPage";
+import HelpContactForm from "./HelpContactForm";
 import { PowerliftingProvider } from "../../contexts/PowerliftingContext";
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState("dashboard");
+  const [helpFormOpen, setHelpFormOpen] = useState(false);
+
+  const handleItemClick = (key: string) => {
+    if (key === "help") {
+      setHelpFormOpen(true);
+    } else {
+      setActiveView(key);
+    }
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -23,6 +34,8 @@ const Dashboard = () => {
         return <EquipmentChecklist />;
       case "analytics":
         return <Analytics />;
+      case "settings":
+        return <SettingsPage onBack={() => setActiveView("dashboard")} />;
       default:
         return <PowerliftingDashboard />;
     }
@@ -31,13 +44,15 @@ const Dashboard = () => {
   return (
     <PowerliftingProvider>
       <div className="min-h-screen bg-gray-900">
-        <TopNavigation />
+        <TopNavigation onSettingsClick={() => setActiveView("settings")} />
 
         <div className="flex pt-16">
-          <Sidebar activeItem={activeView} onItemClick={setActiveView} />
+          <Sidebar activeItem={activeView} onItemClick={handleItemClick} />
 
           <main className="flex-1 overflow-auto">{renderContent()}</main>
         </div>
+
+        <HelpContactForm open={helpFormOpen} onOpenChange={setHelpFormOpen} />
       </div>
     </PowerliftingProvider>
   );

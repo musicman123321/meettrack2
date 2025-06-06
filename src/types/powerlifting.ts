@@ -25,12 +25,24 @@ export interface MeetGoals {
   deadlift: LiftAttempts;
 }
 
+export interface UserSettings {
+  id?: string;
+  user_id: string;
+  weight_unit: "kg" | "lbs";
+  theme?: "light" | "dark" | "system";
+  dashboard_start_tab?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface PowerliftingState {
   meetInfo: MeetInfo;
   currentStats: CurrentStats;
   meetGoals: MeetGoals;
   equipmentChecklist: EquipmentItem[];
   weightHistory: WeightEntry[];
+  unitPreference: "kg" | "lbs";
+  userSettings?: UserSettings;
 }
 
 export interface EquipmentItem {

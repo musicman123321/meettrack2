@@ -4,6 +4,7 @@ import React, {
   useReducer,
   useEffect,
   ReactNode,
+  useState,
 } from "react";
 import {
   PowerliftingState,
@@ -12,8 +13,12 @@ import {
   MeetGoals,
   EquipmentItem,
   WeightEntry,
+  UserSettings,
   DEFAULT_EQUIPMENT,
 } from "../types/powerlifting";
+import { supabase } from "../../supabase/supabase";
+import { useAuth } from "../../supabase/auth";
+import type { Database } from "../types/supabase";
 
 type PowerliftingAction =
   | { type: "SET_MEET_INFO"; payload: MeetInfo }
@@ -25,6 +30,8 @@ type PowerliftingAction =
     }
   | { type: "TOGGLE_EQUIPMENT"; payload: string }
   | { type: "ADD_WEIGHT_ENTRY"; payload: WeightEntry }
+  | { type: "SET_UNIT_PREFERENCE"; payload: "kg" | "lbs" }
+  | { type: "SET_USER_SETTINGS"; payload: UserSettings }
   | { type: "LOAD_STATE"; payload: PowerliftingState };
 
 const initialState: PowerliftingState = {
@@ -47,6 +54,7 @@ const initialState: PowerliftingState = {
   },
   equipmentChecklist: DEFAULT_EQUIPMENT,
   weightHistory: [{ date: new Date().toISOString().split("T")[0], weight: 80 }],
+  unitPreference: "kg",
 };
 
 function powerliftingReducer(
@@ -82,6 +90,17 @@ function powerliftingReducer(
         ...state,
         weightHistory: [...state.weightHistory, action.payload],
       };
+    case "SET_UNIT_PREFERENCE":
+      return {
+        ...state,
+        unitPreference: action.payload,
+      };
+    case "SET_USER_SETTINGS":
+      return {
+        ...state,
+        userSettings: action.payload,
+        unitPreference: action.payload.weight_unit,
+      };
     case "LOAD_STATE":
       return action.payload;
     default:
@@ -92,6 +111,8 @@ function powerliftingReducer(
 interface PowerliftingContextType {
   state: PowerliftingState;
   dispatch: React.Dispatch<PowerliftingAction>;
+  loading: boolean;
+  error: string | null;
   calculateWilks: (
     total: number,
     bodyweight: number,
@@ -104,6 +125,21 @@ interface PowerliftingContextType {
   ) => number;
   getDaysUntilMeet: () => number;
   getProgressPercentage: (lift: "squat" | "bench" | "deadlift") => number;
+  refreshData: () => Promise<void>;
+  saveCurrentStats: (stats: CurrentStats) => Promise<void>;
+  saveMeetGoals: (goals: MeetGoals) => Promise<void>;
+  saveMeetInfo: (info: MeetInfo) => Promise<void>;
+  addWeightEntry: (entry: WeightEntry) => Promise<void>;
+  toggleEquipmentItem: (itemId: string) => Promise<void>;
+  updateCurrentWeight: (weight: number) => Promise<void>;
+  updateUnitPreference: (unit: "kg" | "lbs") => Promise<void>;
+  saveUserSettings: (settings: Partial<UserSettings>) => Promise<void>;
+  convertWeight: (
+    weight: number,
+    fromUnit?: "kg" | "lbs",
+    toUnit?: "kg" | "lbs",
+  ) => number;
+  formatWeight: (weight: number, unit?: "kg" | "lbs") => string;
 }
 
 const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
@@ -112,26 +148,267 @@ const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
 
 export function PowerliftingProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(powerliftingReducer, initialState);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  // Load state from localStorage on mount
-  useEffect(() => {
-    const savedState = localStorage.getItem("powerliftingState");
-    if (savedState) {
-      try {
-        const parsedState = JSON.parse(savedState);
-        // Convert date string back to Date object
-        parsedState.meetInfo.meetDate = new Date(parsedState.meetInfo.meetDate);
-        dispatch({ type: "LOAD_STATE", payload: parsedState });
-      } catch (error) {
-        console.error("Error loading saved state:", error);
-      }
+  // Debug logging function
+  const debugLog = (message: string, data?: any) => {
+    console.log(`[PowerliftingContext] ${message}`, data || "");
+  };
+
+  // Error logging function
+  const errorLog = (message: string, error: any) => {
+    console.error(`[PowerliftingContext] ${message}`, error);
+    setError(message);
+  };
+
+  // Fetch user data from Supabase
+  const fetchUserData = async () => {
+    if (!user?.id) {
+      debugLog("No user found, skipping data fetch");
+      setLoading(false);
+      return;
     }
-  }, []);
 
-  // Save state to localStorage whenever it changes
+    try {
+      setLoading(true);
+      setError(null);
+      debugLog("Fetching user data for user:", user.id);
+
+      // Fetch user settings
+      debugLog("Fetching user settings...");
+      const { data: userSettings, error: settingsError } = await supabase
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (settingsError && settingsError.code !== "PGRST116") {
+        errorLog("Error fetching user settings", settingsError);
+      }
+      debugLog("User settings fetched:", userSettings);
+
+      // Initialize default settings if none exist
+      if (!userSettings) {
+        debugLog("No user settings found, creating defaults...");
+        const defaultSettings: Partial<UserSettings> = {
+          user_id: user.id,
+          weight_unit: "kg",
+          theme: "dark",
+          dashboard_start_tab: "dashboard",
+        };
+
+        const { data: newSettings, error: createError } = await supabase
+          .from("user_settings")
+          .insert(defaultSettings)
+          .select()
+          .single();
+
+        if (createError) {
+          errorLog("Error creating default settings", createError);
+        } else {
+          debugLog("Default settings created:", newSettings);
+        }
+      }
+
+      // Fetch current stats
+      debugLog("Fetching current stats...");
+      const { data: currentStatsData, error: statsError } = await supabase
+        .from("current_stats")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (statsError) {
+        errorLog("Error fetching current stats", statsError);
+        throw new Error(`Failed to fetch current stats: ${statsError.message}`);
+      }
+      debugLog("Current stats fetched:", currentStatsData);
+
+      // Fetch active meet
+      debugLog("Fetching active meet...");
+      const { data: meetData, error: meetError } = await supabase
+        .from("meets")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (meetError) {
+        errorLog("Error fetching meet data", meetError);
+        throw new Error(`Failed to fetch meet data: ${meetError.message}`);
+      }
+      debugLog("Meet data fetched:", meetData);
+
+      // Fetch meet goals
+      debugLog("Fetching meet goals...");
+      const { data: meetGoalsData, error: goalsError } = await supabase
+        .from("meet_goals")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("meet_id", meetData?.id || "00000000-0000-0000-0000-000000000000");
+
+      if (goalsError) {
+        errorLog("Error fetching meet goals", goalsError);
+        throw new Error(`Failed to fetch meet goals: ${goalsError.message}`);
+      }
+      debugLog("Meet goals fetched:", meetGoalsData);
+
+      // Fetch weight history
+      debugLog("Fetching weight history...");
+      const { data: weightHistoryData, error: weightError } = await supabase
+        .from("weight_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .limit(30);
+
+      if (weightError) {
+        errorLog("Error fetching weight history", weightError);
+        throw new Error(
+          `Failed to fetch weight history: ${weightError.message}`,
+        );
+      }
+      debugLog("Weight history fetched:", weightHistoryData);
+
+      // Fetch equipment checklist
+      debugLog("Fetching equipment checklist...");
+      const { data: equipmentData, error: equipmentError } = await supabase
+        .from("equipment_checklist")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (equipmentError) {
+        errorLog("Error fetching equipment checklist", equipmentError);
+        throw new Error(
+          `Failed to fetch equipment checklist: ${equipmentError.message}`,
+        );
+      }
+      debugLog("Equipment checklist fetched:", equipmentData);
+
+      // Initialize default equipment if none exists
+      if (!equipmentData || equipmentData.length === 0) {
+        debugLog("No equipment found, initializing defaults...");
+        await initializeDefaultEquipment();
+        // Refetch equipment after initialization
+        const { data: newEquipmentData } = await supabase
+          .from("equipment_checklist")
+          .select("*")
+          .eq("user_id", user.id);
+        debugLog("Default equipment initialized:", newEquipmentData);
+      }
+
+      // Transform and set data
+      const newState: PowerliftingState = {
+        meetInfo: meetData
+          ? {
+              meetDate: new Date(meetData.meet_date),
+              targetWeightClass: meetData.target_weight_class,
+              meetName: meetData.meet_name || "",
+              location: meetData.location || "",
+            }
+          : initialState.meetInfo,
+        currentStats: currentStatsData
+          ? {
+              weight: currentStatsData.weight,
+              squatMax: currentStatsData.squat_max,
+              benchMax: currentStatsData.bench_max,
+              deadliftMax: currentStatsData.deadlift_max,
+            }
+          : initialState.currentStats,
+        meetGoals: transformMeetGoalsFromDB(meetGoalsData || []),
+        equipmentChecklist:
+          equipmentData?.length > 0
+            ? transformEquipmentFromDB(equipmentData)
+            : DEFAULT_EQUIPMENT,
+        weightHistory:
+          weightHistoryData?.map((entry) => ({
+            date: entry.date,
+            weight: entry.weight,
+          })) || [],
+        unitPreference: userSettings?.weight_unit || "kg",
+        userSettings: userSettings || undefined,
+      };
+
+      debugLog("Successfully fetched user data:", newState);
+      dispatch({ type: "LOAD_STATE", payload: newState });
+    } catch (err: any) {
+      errorLog("Error fetching user data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Transform meet goals from database format
+  const transformMeetGoalsFromDB = (goalsData: any[]): MeetGoals => {
+    const goals: MeetGoals = {
+      squat: { opener: 125, second: 140, third: 150, confidence: 8 },
+      bench: { opener: 90, second: 100, third: 107.5, confidence: 7 },
+      deadlift: { opener: 162.5, second: 180, third: 190, confidence: 9 },
+    };
+
+    goalsData.forEach((goal) => {
+      if (goal.lift_type in goals) {
+        goals[goal.lift_type as keyof MeetGoals] = {
+          opener: goal.opener,
+          second: goal.second,
+          third: goal.third,
+          confidence: goal.confidence,
+        };
+      }
+    });
+
+    return goals;
+  };
+
+  // Transform equipment from database format
+  const transformEquipmentFromDB = (equipmentData: any[]): EquipmentItem[] => {
+    return equipmentData.map((item) => ({
+      id: item.id,
+      name: item.name,
+      checked: item.checked,
+      category: item.category,
+    }));
+  };
+
+  // Initialize default equipment for new users
+  const initializeDefaultEquipment = async () => {
+    if (!user?.id) return;
+
+    try {
+      debugLog("Initializing default equipment for new user");
+      const equipmentToInsert = DEFAULT_EQUIPMENT.map((item) => ({
+        user_id: user.id,
+        name: item.name,
+        category: item.category,
+        checked: false,
+        custom_item: false,
+      }));
+
+      const { error } = await supabase
+        .from("equipment_checklist")
+        .insert(equipmentToInsert);
+
+      if (error) {
+        throw new Error(`Failed to initialize equipment: ${error.message}`);
+      }
+
+      debugLog("Successfully initialized default equipment");
+    } catch (err: any) {
+      errorLog("Error initializing default equipment", err);
+    }
+  };
+
+  // Load data when user changes
   useEffect(() => {
-    localStorage.setItem("powerliftingState", JSON.stringify(state));
-  }, [state]);
+    if (user) {
+      fetchUserData();
+    } else {
+      setLoading(false);
+      dispatch({ type: "LOAD_STATE", payload: initialState });
+    }
+  }, [user]);
 
   const calculateWilks = (
     total: number,
@@ -198,15 +475,332 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     return Math.min(100, (currentMax / goalThird) * 100);
   };
 
+  // Save current stats to Supabase
+  const saveCurrentStats = async (stats: CurrentStats) => {
+    if (!user?.id) {
+      errorLog("No user found when saving current stats", null);
+      return;
+    }
+
+    try {
+      debugLog("Saving current stats:", stats);
+
+      // First try to update existing record
+      const { error: updateError } = await supabase
+        .from("current_stats")
+        .update({
+          weight: stats.weight,
+          squat_max: stats.squatMax,
+          bench_max: stats.benchMax,
+          deadlift_max: stats.deadliftMax,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      // If no record exists, insert a new one
+      if (updateError?.code === "PGRST116") {
+        // No rows affected
+        const { error: insertError } = await supabase
+          .from("current_stats")
+          .insert({
+            user_id: user.id,
+            weight: stats.weight,
+            squat_max: stats.squatMax,
+            bench_max: stats.benchMax,
+            deadlift_max: stats.deadliftMax,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (insertError) throw insertError;
+      } else if (updateError) {
+        throw updateError;
+      }
+
+      debugLog("Successfully saved current stats");
+      dispatch({ type: "SET_CURRENT_STATS", payload: stats });
+    } catch (err: any) {
+      errorLog("Error saving current stats", err);
+      throw err; // Re-throw to handle in calling function
+    }
+  };
+
+  // Save meet goals to Supabase
+  const saveMeetGoals = async (goals: MeetGoals) => {
+    if (!user?.id) {
+      errorLog("No user found when saving meet goals", null);
+      return;
+    }
+
+    try {
+      debugLog("Saving meet goals:", goals);
+
+      // Get active meet ID
+      const { data: meetData } = await supabase
+        .from("meets")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .single();
+
+      const meetId = meetData?.id;
+      if (!meetId) {
+        throw new Error("No active meet found");
+      }
+
+      // Prepare goals data for upsert
+      const goalsToUpsert = Object.entries(goals).map(
+        ([liftType, attempts]) => ({
+          user_id: user.id,
+          meet_id: meetId,
+          lift_type: liftType,
+          opener: attempts.opener,
+          second: attempts.second,
+          third: attempts.third,
+          confidence: attempts.confidence,
+        }),
+      );
+
+      const { error } = await supabase
+        .from("meet_goals")
+        .upsert(goalsToUpsert, {
+          onConflict: "user_id,meet_id,lift_type",
+        });
+
+      if (error) {
+        throw new Error(`Failed to save meet goals: ${error.message}`);
+      }
+
+      debugLog("Successfully saved meet goals");
+      dispatch({ type: "SET_MEET_GOALS", payload: goals });
+    } catch (err: any) {
+      errorLog("Error saving meet goals", err);
+    }
+  };
+
+  // Save meet info to Supabase
+  const saveMeetInfo = async (info: MeetInfo) => {
+    if (!user?.id) {
+      errorLog("No user found when saving meet info", null);
+      return;
+    }
+
+    try {
+      debugLog("Saving meet info:", info);
+      const { error } = await supabase.from("meets").upsert({
+        user_id: user.id,
+        meet_name: info.meetName || "",
+        meet_date: info.meetDate.toISOString().split("T")[0],
+        location: info.location || "",
+        target_weight_class: info.targetWeightClass,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        throw new Error(`Failed to save meet info: ${error.message}`);
+      }
+
+      debugLog("Successfully saved meet info");
+      dispatch({ type: "SET_MEET_INFO", payload: info });
+    } catch (err: any) {
+      errorLog("Error saving meet info", err);
+    }
+  };
+
+  // Add weight entry to Supabase
+  const addWeightEntry = async (entry: WeightEntry) => {
+    if (!user?.id) {
+      errorLog("No user found when adding weight entry", null);
+      return;
+    }
+
+    try {
+      debugLog("Adding weight entry:", entry);
+      const { error } = await supabase.from("weight_history").insert({
+        user_id: user.id,
+        weight: entry.weight,
+        date: entry.date,
+      });
+
+      if (error) {
+        throw new Error(`Failed to add weight entry: ${error.message}`);
+      }
+
+      debugLog("Successfully added weight entry");
+      dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
+    } catch (err: any) {
+      errorLog("Error adding weight entry", err);
+    }
+  };
+
+  // Toggle equipment item in Supabase
+  const toggleEquipmentItem = async (itemId: string) => {
+    if (!user?.id) {
+      errorLog("No user found when toggling equipment", null);
+      return;
+    }
+
+    try {
+      debugLog("Toggling equipment item:", itemId);
+      const item = state.equipmentChecklist.find((item) => item.id === itemId);
+      if (!item) {
+        throw new Error("Equipment item not found");
+      }
+
+      const { error } = await supabase
+        .from("equipment_checklist")
+        .update({ checked: !item.checked })
+        .eq("id", itemId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw new Error(`Failed to toggle equipment: ${error.message}`);
+      }
+
+      debugLog("Successfully toggled equipment item");
+      dispatch({ type: "TOGGLE_EQUIPMENT", payload: itemId });
+    } catch (err: any) {
+      errorLog("Error toggling equipment item", err);
+    }
+  };
+
+  // Update just the current weight (for inline editing)
+  const updateCurrentWeight = async (weight: number) => {
+    if (!user?.id) {
+      errorLog("No user found when updating current weight", null);
+      return;
+    }
+
+    try {
+      debugLog("Updating current weight:", weight);
+
+      const updatedStats = {
+        ...state.currentStats,
+        weight: weight,
+      };
+
+      await saveCurrentStats(updatedStats);
+      debugLog("Successfully updated current weight");
+    } catch (err: any) {
+      errorLog("Error updating current weight", err);
+      throw err;
+    }
+  };
+
+  // Update unit preference (legacy method - now uses saveUserSettings)
+  const updateUnitPreference = async (unit: "kg" | "lbs") => {
+    await saveUserSettings({ weight_unit: unit });
+  };
+
+  // Save user settings with optimistic updates and visual feedback
+  const saveUserSettings = async (settings: Partial<UserSettings>) => {
+    if (!user?.id) {
+      errorLog("No user found when saving user settings", null);
+      return;
+    }
+
+    try {
+      debugLog("Saving user settings:", settings);
+
+      // Optimistic update for immediate UI feedback
+      const currentSettings = state.userSettings || {
+        user_id: user.id,
+        weight_unit: "kg" as const,
+        theme: "dark" as const,
+        dashboard_start_tab: "dashboard",
+      };
+
+      const updatedSettings = { ...currentSettings, ...settings };
+      dispatch({ type: "SET_USER_SETTINGS", payload: updatedSettings });
+
+      // Update in database
+      const { data, error } = await supabase
+        .from("user_settings")
+        .upsert(
+          {
+            user_id: user.id,
+            ...settings,
+          },
+          {
+            onConflict: "user_id",
+          },
+        )
+        .select()
+        .single();
+
+      if (error) {
+        // Revert optimistic update on error
+        dispatch({ type: "SET_USER_SETTINGS", payload: currentSettings });
+        throw new Error(`Failed to save user settings: ${error.message}`);
+      }
+
+      // Update with server response
+      if (data) {
+        dispatch({ type: "SET_USER_SETTINGS", payload: data });
+      }
+
+      debugLog("Successfully saved user settings");
+    } catch (err: any) {
+      errorLog("Error saving user settings", err);
+      throw err;
+    }
+  };
+
+  // Convert weight between units
+  const convertWeight = (
+    weight: number,
+    fromUnit?: "kg" | "lbs",
+    toUnit?: "kg" | "lbs",
+  ): number => {
+    const from = fromUnit || "kg";
+    const to = toUnit || state.unitPreference;
+
+    if (from === to) return weight;
+
+    if (from === "kg" && to === "lbs") {
+      return Math.round(weight * 2.20462 * 100) / 100;
+    } else if (from === "lbs" && to === "kg") {
+      return Math.round((weight / 2.20462) * 100) / 100;
+    }
+
+    return weight;
+  };
+
+  // Format weight with unit
+  const formatWeight = (weight: number, unit?: "kg" | "lbs"): string => {
+    const displayUnit = unit || state.unitPreference;
+    const convertedWeight = convertWeight(weight, "kg", displayUnit);
+    return `${convertedWeight}${displayUnit}`;
+  };
+
+  // Refresh all data
+  const refreshData = async () => {
+    await fetchUserData();
+  };
+
   return (
     <PowerliftingContext.Provider
       value={{
         state,
         dispatch,
+        loading,
+        error,
         calculateWilks,
         calculateDots,
         getDaysUntilMeet,
         getProgressPercentage,
+        refreshData,
+        saveCurrentStats,
+        saveMeetGoals,
+        saveMeetInfo,
+        addWeightEntry,
+        toggleEquipmentItem,
+        updateCurrentWeight,
+        updateUnitPreference,
+        saveUserSettings,
+        convertWeight,
+        formatWeight,
       }}
     >
       {children}

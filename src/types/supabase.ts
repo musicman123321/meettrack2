@@ -9,6 +9,155 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      current_stats: {
+        Row: {
+          bench_max: number
+          created_at: string
+          deadlift_max: number
+          id: string
+          squat_max: number
+          updated_at: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          bench_max?: number
+          created_at?: string
+          deadlift_max?: number
+          id?: string
+          squat_max?: number
+          updated_at?: string
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          bench_max?: number
+          created_at?: string
+          deadlift_max?: number
+          id?: string
+          squat_max?: number
+          updated_at?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      equipment_checklist: {
+        Row: {
+          category: string
+          checked: boolean | null
+          created_at: string
+          custom_item: boolean | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          checked?: boolean | null
+          created_at?: string
+          custom_item?: boolean | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          checked?: boolean | null
+          created_at?: string
+          custom_item?: boolean | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meet_goals: {
+        Row: {
+          confidence: number
+          created_at: string
+          id: string
+          lift_type: string
+          meet_id: string
+          opener: number
+          second: number
+          third: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          lift_type: string
+          meet_id: string
+          opener?: number
+          second?: number
+          third?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          lift_type?: string
+          meet_id?: string
+          opener?: number
+          second?: number
+          third?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meet_goals_meet_id_fkey"
+            columns: ["meet_id"]
+            isOneToOne: false
+            referencedRelation: "meets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meets: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          location: string | null
+          meet_date: string
+          meet_name: string | null
+          target_weight_class: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          meet_date: string
+          meet_name?: string | null
+          target_weight_class: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          meet_date?: string
+          meet_name?: string | null
+          target_weight_class?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount: number | null
@@ -89,6 +238,36 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          dashboard_start_tab: string | null
+          id: string
+          theme: string | null
+          updated_at: string
+          user_id: string
+          weight_unit: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard_start_tab?: string | null
+          id?: string
+          theme?: string | null
+          updated_at?: string
+          user_id: string
+          weight_unit?: string
+        }
+        Update: {
+          created_at?: string
+          dashboard_start_tab?: string | null
+          id?: string
+          theme?: string | null
+          updated_at?: string
+          user_id?: string
+          weight_unit?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -96,11 +275,13 @@ export type Database = {
           credits: string | null
           email: string | null
           full_name: string | null
+          gender: Database["public"]["Enums"]["gender"] | null
           id: string
           image: string | null
           name: string | null
           subscription: string | null
           token_identifier: string
+          unit_preference: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -110,11 +291,13 @@ export type Database = {
           credits?: string | null
           email?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
           id: string
           image?: string | null
           name?: string | null
           subscription?: string | null
           token_identifier: string
+          unit_preference?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -124,11 +307,13 @@ export type Database = {
           credits?: string | null
           email?: string | null
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           image?: string | null
           name?: string | null
           subscription?: string | null
           token_identifier?: string
+          unit_preference?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -167,6 +352,30 @@ export type Database = {
         }
         Relationships: []
       }
+      weight_history: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          user_id: string
+          weight: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -175,7 +384,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      category: "essential" | "optional" | "meet-day"
+      gender: "Male" | "Female" | "Other"
+      lifts: "squat" | "bench" | "deadlift"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -290,6 +501,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      category: ["essential", "optional", "meet-day"],
+      gender: ["Male", "Female", "Other"],
+      lifts: ["squat", "bench", "deadlift"],
+    },
   },
 } as const

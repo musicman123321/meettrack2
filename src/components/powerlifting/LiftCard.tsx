@@ -19,7 +19,7 @@ export default function LiftCard({
   color,
   bgColor,
 }: LiftCardProps) {
-  const { state, getProgressPercentage } = usePowerlifting();
+  const { state, getProgressPercentage, formatWeight } = usePowerlifting();
 
   const liftName = lift.charAt(0).toUpperCase() + lift.slice(1);
   const currentMax = state.currentStats[
@@ -47,7 +47,7 @@ export default function LiftCard({
               <CardTitle className="text-white">{liftName}</CardTitle>
             </div>
             <Badge variant="outline" className="text-gray-300 border-gray-600">
-              {currentMax}kg
+              {formatWeight(currentMax)}
             </Badge>
           </div>
         </CardHeader>
@@ -63,18 +63,20 @@ export default function LiftCard({
             <div className="text-center p-2 bg-gray-700 rounded">
               <div className="text-gray-400">Opener</div>
               <div className="text-white font-semibold">
-                {attempts.opener}kg
+                {formatWeight(attempts.opener)}
               </div>
             </div>
             <div className="text-center p-2 bg-gray-700 rounded">
               <div className="text-gray-400">Second</div>
               <div className="text-white font-semibold">
-                {attempts.second}kg
+                {formatWeight(attempts.second)}
               </div>
             </div>
             <div className="text-center p-2 bg-gray-700 rounded">
               <div className="text-gray-400">Third</div>
-              <div className="text-white font-semibold">{attempts.third}kg</div>
+              <div className="text-white font-semibold">
+                {formatWeight(attempts.third)}
+              </div>
             </div>
           </div>
 

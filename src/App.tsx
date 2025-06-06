@@ -7,6 +7,7 @@ import Dashboard from "./components/pages/dashboard";
 import Success from "./components/pages/success";
 import Home from "./components/pages/home";
 import { AuthProvider, useAuth } from "../supabase/auth";
+import { PowerliftingProvider } from "./contexts/PowerliftingContext";
 import { Toaster } from "./components/ui/toaster";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -38,12 +39,7 @@ function AppRoutes() {
             </PrivateRoute>
           }
         />
-        <Route
-          path="/success"
-          element={
-            <Success />
-          }
-        />
+        <Route path="/success" element={<Success />} />
       </Routes>
       {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
     </>
@@ -53,10 +49,12 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Suspense fallback={<p>Loading...</p>}>
-        <AppRoutes />
-      </Suspense>
-      <Toaster />
+      <PowerliftingProvider>
+        <Suspense fallback={<p>Loading...</p>}>
+          <AppRoutes />
+        </Suspense>
+        <Toaster />
+      </PowerliftingProvider>
     </AuthProvider>
   );
 }
