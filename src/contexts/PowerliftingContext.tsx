@@ -29,6 +29,7 @@ type PowerliftingAction =
     }
   | { type: "TOGGLE_EQUIPMENT"; payload: string }
   | { type: "ADD_WEIGHT_ENTRY"; payload: WeightEntry }
+  | { type: "SET_UNIT_PREFERENCE"; payload: "kg" | "lbs" }
   | { type: "LOAD_STATE"; payload: PowerliftingState };
 
 const initialState: PowerliftingState = {
@@ -51,6 +52,7 @@ const initialState: PowerliftingState = {
   },
   equipmentChecklist: DEFAULT_EQUIPMENT,
   weightHistory: [{ date: new Date().toISOString().split("T")[0], weight: 80 }],
+  unitPreference: "kg",
 };
 
 function powerliftingReducer(
@@ -86,6 +88,11 @@ function powerliftingReducer(
         ...state,
         weightHistory: [...state.weightHistory, action.payload],
       };
+    case "SET_UNIT_PREFERENCE":
+      return {
+        ...state,
+        unitPreference: action.payload,
+      };
     case "LOAD_STATE":
       return action.payload;
     default:
@@ -117,6 +124,13 @@ interface PowerliftingContextType {
   addWeightEntry: (entry: WeightEntry) => Promise<void>;
   toggleEquipmentItem: (itemId: string) => Promise<void>;
   updateCurrentWeight: (weight: number) => Promise<void>;
+  updateUnitPreference: (unit: "kg" | "lbs") => Promise<void>;
+  convertWeight: (
+    weight: number,
+    fromUnit?: "kg" | "lbs",
+    toUnit?: "kg" | "lbs",
+  ) => number;
+  formatWeight: (weight: number, unit?: "kg" | "lbs") => string;
 }
 
 const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
@@ -152,6 +166,19 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       debugLog("Fetching user data for user:", user.id);
+
+      // Fetch user profile for unit preference
+      debugLog("Fetching user profile...");
+      const { data: userProfile, error: profileError } = await supabase
+        .from("users")
+        .select("unit_preference")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        errorLog("Error fetching user profile", profileError);
+      }
+      debugLog("User profile fetched:", userProfile);
 
       // Fetch current stats
       debugLog("Fetching current stats...");
@@ -268,6 +295,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
             date: entry.date,
             weight: entry.weight,
           })) || [],
+        unitPreference: (userProfile?.unit_preference as "kg" | "lbs") || "kg",
       };
 
       debugLog("Successfully fetched user data:", newState);
@@ -627,6 +655,61 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Update unit preference
+  const updateUnitPreference = async (unit: "kg" | "lbs") => {
+    if (!user?.id) {
+      errorLog("No user found when updating unit preference", null);
+      return;
+    }
+
+    try {
+      debugLog("Updating unit preference:", unit);
+
+      // Update in database
+      const { error } = await supabase
+        .from("users")
+        .update({ unit_preference: unit })
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw new Error(`Failed to update unit preference: ${error.message}`);
+      }
+
+      debugLog("Successfully updated unit preference");
+      dispatch({ type: "SET_UNIT_PREFERENCE", payload: unit });
+    } catch (err: any) {
+      errorLog("Error updating unit preference", err);
+      throw err;
+    }
+  };
+
+  // Convert weight between units
+  const convertWeight = (
+    weight: number,
+    fromUnit?: "kg" | "lbs",
+    toUnit?: "kg" | "lbs",
+  ): number => {
+    const from = fromUnit || "kg";
+    const to = toUnit || state.unitPreference;
+
+    if (from === to) return weight;
+
+    if (from === "kg" && to === "lbs") {
+      return Math.round(weight * 2.20462 * 100) / 100;
+    } else if (from === "lbs" && to === "kg") {
+      return Math.round((weight / 2.20462) * 100) / 100;
+    }
+
+    return weight;
+  };
+
+  // Format weight with unit
+  const formatWeight = (weight: number, unit?: "kg" | "lbs"): string => {
+    const displayUnit = unit || state.unitPreference;
+    const convertedWeight = convertWeight(weight, "kg", displayUnit);
+    return `${convertedWeight}${displayUnit}`;
+  };
+
   // Refresh all data
   const refreshData = async () => {
     await fetchUserData();
@@ -650,6 +733,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         addWeightEntry,
         toggleEquipmentItem,
         updateCurrentWeight,
+        updateUnitPreference,
+        convertWeight,
+        formatWeight,
       }}
     >
       {children}

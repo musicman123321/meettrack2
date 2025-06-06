@@ -11,122 +11,106 @@ export type Database = {
     Tables: {
       current_stats: {
         Row: {
-          bench_max: number | null
+          bench_max: number
           created_at: string
-          deadlift_max: number | null
-          id: number
-          squat_max: number | null
-          updated_at: string | null
-          user_id: string | null
-          weight: number | null
+          deadlift_max: number
+          id: string
+          squat_max: number
+          updated_at: string
+          user_id: string
+          weight: number
         }
         Insert: {
-          bench_max?: number | null
+          bench_max?: number
           created_at?: string
-          deadlift_max?: number | null
-          id?: number
-          squat_max?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-          weight?: number | null
+          deadlift_max?: number
+          id?: string
+          squat_max?: number
+          updated_at?: string
+          user_id: string
+          weight?: number
         }
         Update: {
-          bench_max?: number | null
+          bench_max?: number
           created_at?: string
-          deadlift_max?: number | null
-          id?: number
-          squat_max?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-          weight?: number | null
+          deadlift_max?: number
+          id?: string
+          squat_max?: number
+          updated_at?: string
+          user_id?: string
+          weight?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "current_stats_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       equipment_checklist: {
         Row: {
-          category: Database["public"]["Enums"]["category"] | null
+          category: string
           checked: boolean | null
           created_at: string
-          custom_item: string | null
-          id: number
-          name: string | null
-          updated_at: string | null
-          user_id: string | null
+          custom_item: boolean | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          category?: Database["public"]["Enums"]["category"] | null
+          category: string
           checked?: boolean | null
           created_at?: string
-          custom_item?: string | null
-          id?: number
-          name?: string | null
-          updated_at?: string | null
-          user_id?: string | null
+          custom_item?: boolean | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["category"] | null
+          category?: string
           checked?: boolean | null
           created_at?: string
-          custom_item?: string | null
-          id?: number
-          name?: string | null
-          updated_at?: string | null
-          user_id?: string | null
+          custom_item?: boolean | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "equipment_checklist_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       meet_goals: {
         Row: {
-          confidence: number | null
+          confidence: number
           created_at: string
-          id: number
-          lift_type: Database["public"]["Enums"]["lifts"] | null
-          meet_id: number | null
-          opener: number | null
-          second: number | null
-          third: number | null
-          updated_at: string | null
-          user_id: string | null
+          id: string
+          lift_type: string
+          meet_id: string
+          opener: number
+          second: number
+          third: number
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          confidence?: number | null
+          confidence?: number
           created_at?: string
-          id?: number
-          lift_type?: Database["public"]["Enums"]["lifts"] | null
-          meet_id?: number | null
-          opener?: number | null
-          second?: number | null
-          third?: number | null
-          updated_at?: string | null
-          user_id?: string | null
+          id?: string
+          lift_type: string
+          meet_id: string
+          opener?: number
+          second?: number
+          third?: number
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          confidence?: number | null
+          confidence?: number
           created_at?: string
-          id?: number
-          lift_type?: Database["public"]["Enums"]["lifts"] | null
-          meet_id?: number | null
-          opener?: number | null
-          second?: number | null
-          third?: number | null
-          updated_at?: string | null
-          user_id?: string | null
+          id?: string
+          lift_type?: string
+          meet_id?: string
+          opener?: number
+          second?: number
+          third?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -136,58 +120,43 @@ export type Database = {
             referencedRelation: "meets"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "meet_goals_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       meets: {
         Row: {
           created_at: string
-          id: number
+          id: string
           is_active: boolean | null
           location: string | null
-          meet_date: string | null
+          meet_date: string
           meet_name: string | null
-          target_weight_class: number | null
-          updated_at: string | null
-          user_id: string | null
+          target_weight_class: number
+          updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
-          id?: number
+          id?: string
           is_active?: boolean | null
           location?: string | null
-          meet_date?: string | null
+          meet_date: string
           meet_name?: string | null
-          target_weight_class?: number | null
-          updated_at?: string | null
-          user_id?: string | null
+          target_weight_class: number
+          updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
-          id?: number
+          id?: string
           is_active?: boolean | null
           location?: string | null
-          meet_date?: string | null
+          meet_date?: string
           meet_name?: string | null
-          target_weight_class?: number | null
-          updated_at?: string | null
-          user_id?: string | null
+          target_weight_class?: number
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "meets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -282,6 +251,7 @@ export type Database = {
           name: string | null
           subscription: string | null
           token_identifier: string
+          unit_preference: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -297,6 +267,7 @@ export type Database = {
           name?: string | null
           subscription?: string | null
           token_identifier: string
+          unit_preference?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -312,6 +283,7 @@ export type Database = {
           name?: string | null
           subscription?: string | null
           token_identifier?: string
+          unit_preference?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -353,34 +325,26 @@ export type Database = {
       weight_history: {
         Row: {
           created_at: string
-          date: string | null
-          id: number
-          user_id: string | null
-          weight: number | null
+          date: string
+          id: string
+          user_id: string
+          weight: number
         }
         Insert: {
           created_at?: string
-          date?: string | null
-          id?: number
-          user_id?: string | null
-          weight?: number | null
+          date: string
+          id?: string
+          user_id: string
+          weight: number
         }
         Update: {
           created_at?: string
-          date?: string | null
-          id?: number
-          user_id?: string | null
-          weight?: number | null
+          date?: string
+          id?: string
+          user_id?: string
+          weight?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "weight_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

@@ -23,6 +23,7 @@ import { Link } from "react-router-dom";
 interface TopNavigationProps {
   onSearch?: (query: string) => void;
   notifications?: Array<{ id: string; title: string }>;
+  onSettingsClick?: () => void;
 }
 
 const TopNavigation = ({
@@ -31,6 +32,7 @@ const TopNavigation = ({
     { id: "1", title: "Meet in 30 days - Check equipment" },
     { id: "2", title: "Weight cut reminder" },
   ],
+  onSettingsClick = () => {},
 }: TopNavigationProps) => {
   const { user, signOut } = useAuth();
 
@@ -106,6 +108,7 @@ const TopNavigation = ({
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={onSettingsClick}
                 className="text-gray-300 hover:text-white hover:bg-gray-700"
               >
                 <Settings className="h-5 w-5" />

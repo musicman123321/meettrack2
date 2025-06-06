@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +21,105 @@ import {
   Users,
   ArrowRight,
   Star,
+  Heart,
+  DollarSign,
 } from "lucide-react";
 import { useAuth } from "../../../supabase/auth";
+import { supabase } from "../../../supabase/supabase";
+import { toast } from "@/components/ui/use-toast";
+
+// Support Donation Component
+function SupportDonation() {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [selectedAmount, setSelectedAmount] = useState(5);
+
+  const donationAmounts = [5, 10, 25, 50];
+
+  const handleDonation = async (amount: number) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "supabase-functions-create-checkout",
+        {
+          body: {
+            productPriceId: "donation", // This would need to be configured in Polar.sh
+            successUrl: `${window.location.origin}/success?type=donation`,
+            customerEmail: user?.email || "anonymous@example.com",
+            metadata: {
+              type: "donation",
+              amount: amount,
+              source: "homepage",
+            },
+          },
+        },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error: any) {
+      console.error("Donation error:", error);
+      toast({
+        title: "Unable to process donation",
+        description: "Please try again later or contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="bg-white border-gray-200 shadow-sm max-w-md mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="flex items-center justify-center gap-2 text-gray-900">
+          <Heart className="h-5 w-5 text-red-500" />
+          Support Development
+        </CardTitle>
+        <CardDescription className="text-gray-600">
+          Choose an amount to support our work
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-2">
+          {donationAmounts.map((amount) => (
+            <Button
+              key={amount}
+              variant={selectedAmount === amount ? "default" : "outline"}
+              onClick={() => setSelectedAmount(amount)}
+              className={
+                selectedAmount === amount
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "border-gray-300 hover:bg-gray-50"
+              }
+            >
+              <DollarSign className="h-4 w-4 mr-1" />
+              {amount}
+            </Button>
+          ))}
+        </div>
+        <Button
+          onClick={() => handleDonation(selectedAmount)}
+          disabled={loading}
+          className="w-full bg-red-600 hover:bg-red-700 text-white"
+          size="lg"
+        >
+          {loading ? "Processing..." : `Donate ${selectedAmount}`}
+        </Button>
+        <p className="text-xs text-gray-500 text-center">
+          Secure payment powered by Polar.sh
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 const features = [
   {
@@ -259,6 +356,26 @@ export default function Home() {
           </div>
         </div>
       </section>
+      {/* Support Section */}
+      <section className="py-20 px-4 bg-gray-100">
+        <div className="container mx-auto text-center">
+          <h2 className="text-4xl font-bold mb-6 text-gray-900">
+            Support Our Development
+          </h2>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Help us continue improving Meet Prep Tracker with an optional
+            donation. Every contribution helps us add new features and maintain
+            the platform.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <SupportDonation />
+            <p className="text-sm text-gray-500">
+              100% optional • Secure payment via Polar.sh
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-red-600 to-orange-600">
         <div className="container mx-auto text-center">

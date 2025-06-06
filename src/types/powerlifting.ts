@@ -31,6 +31,7 @@ export interface PowerliftingState {
   meetGoals: MeetGoals;
   equipmentChecklist: EquipmentItem[];
   weightHistory: WeightEntry[];
+  unitPreference: "kg" | "lbs";
 }
 
 export interface EquipmentItem {
