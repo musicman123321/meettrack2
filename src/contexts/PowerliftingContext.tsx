@@ -116,6 +116,7 @@ interface PowerliftingContextType {
   saveMeetInfo: (info: MeetInfo) => Promise<void>;
   addWeightEntry: (entry: WeightEntry) => Promise<void>;
   toggleEquipmentItem: (itemId: string) => Promise<void>;
+  updateCurrentWeight: (weight: number) => Promise<void>;
 }
 
 const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
@@ -415,52 +416,53 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   // Save current stats to Supabase
   const saveCurrentStats = async (stats: CurrentStats) => {
-  if (!user?.id) {
-    errorLog("No user found when saving current stats", null);
-    return;
-  }
+    if (!user?.id) {
+      errorLog("No user found when saving current stats", null);
+      return;
+    }
 
-  try {
-    debugLog("Saving current stats:", stats);
-    
-    // First try to update existing record
-    const { error: updateError } = await supabase
-      .from("current_stats")
-      .update({
-        weight: stats.weight,
-        squat_max: stats.squatMax,
-        bench_max: stats.benchMax,
-        deadlift_max: stats.deadliftMax,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id);
+    try {
+      debugLog("Saving current stats:", stats);
 
-    // If no record exists, insert a new one
-    if (updateError?.code === 'PGRST116') { // No rows affected
-      const { error: insertError } = await supabase
+      // First try to update existing record
+      const { error: updateError } = await supabase
         .from("current_stats")
-        .insert({
-          user_id: user.id,
+        .update({
           weight: stats.weight,
           squat_max: stats.squatMax,
           bench_max: stats.benchMax,
           deadlift_max: stats.deadliftMax,
-          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        });
+        })
+        .eq("user_id", user.id);
 
-      if (insertError) throw insertError;
-    } else if (updateError) {
-      throw updateError;
+      // If no record exists, insert a new one
+      if (updateError?.code === "PGRST116") {
+        // No rows affected
+        const { error: insertError } = await supabase
+          .from("current_stats")
+          .insert({
+            user_id: user.id,
+            weight: stats.weight,
+            squat_max: stats.squatMax,
+            bench_max: stats.benchMax,
+            deadlift_max: stats.deadliftMax,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (insertError) throw insertError;
+      } else if (updateError) {
+        throw updateError;
+      }
+
+      debugLog("Successfully saved current stats");
+      dispatch({ type: "SET_CURRENT_STATS", payload: stats });
+    } catch (err: any) {
+      errorLog("Error saving current stats", err);
+      throw err; // Re-throw to handle in calling function
     }
-
-    debugLog("Successfully saved current stats");
-    dispatch({ type: "SET_CURRENT_STATS", payload: stats });
-  } catch (err: any) {
-    errorLog("Error saving current stats", err);
-    throw err; // Re-throw to handle in calling function
-  }
-};
+  };
 
   // Save meet goals to Supabase
   const saveMeetGoals = async (goals: MeetGoals) => {
@@ -602,6 +604,29 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Update just the current weight (for inline editing)
+  const updateCurrentWeight = async (weight: number) => {
+    if (!user?.id) {
+      errorLog("No user found when updating current weight", null);
+      return;
+    }
+
+    try {
+      debugLog("Updating current weight:", weight);
+
+      const updatedStats = {
+        ...state.currentStats,
+        weight: weight,
+      };
+
+      await saveCurrentStats(updatedStats);
+      debugLog("Successfully updated current weight");
+    } catch (err: any) {
+      errorLog("Error updating current weight", err);
+      throw err;
+    }
+  };
+
   // Refresh all data
   const refreshData = async () => {
     await fetchUserData();
@@ -624,6 +649,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         saveMeetInfo,
         addWeightEntry,
         toggleEquipmentItem,
+        updateCurrentWeight,
       }}
     >
       {children}

@@ -1,7 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Calendar,
   Target,
@@ -10,14 +22,29 @@ import {
   Dumbbell,
   Scale,
   CheckSquare,
+  Plus,
+  Settings,
+  Edit,
 } from "lucide-react";
 import { usePowerlifting } from "../../contexts/PowerliftingContext";
 import LiftCard from "./LiftCard";
 import AnimatedProgressBar from "./AnimatedProgressBar";
+import { toast } from "@/components/ui/use-toast";
 
 export default function PowerliftingDashboard() {
-  const { state, loading, error, getDaysUntilMeet, calculateWilks } =
-    usePowerlifting();
+  const {
+    state,
+    loading,
+    error,
+    getDaysUntilMeet,
+    calculateWilks,
+    addWeightEntry,
+    saveCurrentStats,
+  } = usePowerlifting();
+
+  const [quickWeightOpen, setQuickWeightOpen] = useState(false);
+  const [quickWeight, setQuickWeight] = useState("");
+  const [saving, setSaving] = useState(false);
 
   if (loading) {
     return (
@@ -62,6 +89,50 @@ export default function PowerliftingDashboard() {
   const totalEquipment = state.equipmentChecklist.length;
   const equipmentProgress = (completedEquipment / totalEquipment) * 100;
 
+  // Handle quick weight logging
+  const handleQuickWeightLog = async () => {
+    if (!quickWeight || parseFloat(quickWeight) <= 0) {
+      toast({
+        title: "Invalid weight",
+        description: "Please enter a valid weight.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const weightValue = parseFloat(quickWeight);
+
+      // Add to weight history
+      await addWeightEntry({
+        date: new Date().toISOString().split("T")[0],
+        weight: weightValue,
+      });
+
+      // Update current stats
+      await saveCurrentStats({
+        ...state.currentStats,
+        weight: weightValue,
+      });
+
+      setQuickWeight("");
+      setQuickWeightOpen(false);
+      toast({
+        title: "Weight logged!",
+        description: `Weight of ${quickWeight}kg has been recorded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error logging weight",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -95,12 +166,68 @@ export default function PowerliftingDashboard() {
           </p>
         </motion.div>
 
+        {/* Quick Actions Bar */}
+        <motion.div
+          variants={itemVariants}
+          className="flex justify-center gap-4 mb-6"
+        >
+          <Dialog open={quickWeightOpen} onOpenChange={setQuickWeightOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Log Weight
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-gray-800 border-gray-700 text-white">
+              <DialogHeader>
+                <DialogTitle>Quick Weight Log</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Log your current weight quickly.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="quickWeight" className="text-gray-300">
+                    Weight (kg)
+                  </Label>
+                  <Input
+                    id="quickWeight"
+                    type="number"
+                    value={quickWeight}
+                    onChange={(e) => setQuickWeight(e.target.value)}
+                    placeholder="Enter current weight"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                    step="0.1"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setQuickWeightOpen(false)}
+                  className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleQuickWeightLog}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {saving ? "Logging..." : "Log Weight"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </motion.div>
+
         {/* Stats Overview */}
         <motion.div
           variants={itemVariants}
           className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
         >
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-400">
@@ -114,6 +241,9 @@ export default function PowerliftingDashboard() {
                 {daysUntilMeet}
               </div>
               <p className="text-xs text-gray-500 mt-1">
+                {state.meetInfo.meetName || "Competition"}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
                 {new Date(state.meetInfo.meetDate).toLocaleDateString()}
               </p>
             </CardContent>
@@ -136,13 +266,19 @@ export default function PowerliftingDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card
+            className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer"
+            onClick={() => setQuickWeightOpen(true)}
+          >
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-400">
                   Body Weight
                 </CardTitle>
-                <Scale className="h-4 w-4 text-green-500" />
+                <div className="flex items-center gap-1">
+                  <Plus className="h-3 w-3 text-gray-500" />
+                  <Scale className="h-4 w-4 text-green-500" />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -152,6 +288,7 @@ export default function PowerliftingDashboard() {
               <p className="text-xs text-gray-500 mt-1">
                 Target: {state.meetInfo.targetWeightClass}kg class
               </p>
+              <p className="text-xs text-blue-400 mt-1">Click to log weight</p>
             </CardContent>
           </Card>
 
@@ -203,38 +340,48 @@ export default function PowerliftingDashboard() {
           />
         </motion.div>
 
-        {/* Quick Actions */}
-        <motion.div
-          variants={itemVariants}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <Calendar className="h-8 w-8 text-red-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-white mb-1">Meet Setup</h3>
-              <p className="text-sm text-gray-400">
-                Configure meet details and goals
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <Scale className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-white mb-1">Weight Tracking</h3>
-              <p className="text-sm text-gray-400">
-                Monitor weight and cutting progress
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <CheckSquare className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-white mb-1">Equipment Check</h3>
-              <p className="text-sm text-gray-400">
-                Prepare your competition gear
-              </p>
+        {/* Progress Summary */}
+        <motion.div variants={itemVariants} className="mb-6">
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Target className="h-5 w-5 text-blue-500" />
+                Competition Readiness
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {Math.round(
+                      ((state.currentStats.squatMax +
+                        state.currentStats.benchMax +
+                        state.currentStats.deadliftMax) /
+                        (state.meetGoals.squat.third +
+                          state.meetGoals.bench.third +
+                          state.meetGoals.deadlift.third)) *
+                        100,
+                    )}
+                    %
+                  </div>
+                  <p className="text-sm text-gray-400">Goal Progress</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {Math.round(equipmentProgress)}%
+                  </div>
+                  <p className="text-sm text-gray-400">Equipment Ready</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {state.currentStats.weight <=
+                    state.meetInfo.targetWeightClass
+                      ? "✓"
+                      : "⚠"}
+                  </div>
+                  <p className="text-sm text-gray-400">Weight Target</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
