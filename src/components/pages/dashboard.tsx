@@ -3,6 +3,7 @@ import TopNavigation from "../dashboard/layout/TopNavigation";
 import Sidebar from "../dashboard/layout/Sidebar";
 import PowerliftingDashboard from "../powerlifting/PowerliftingDashboard";
 import LiftTracker from "../powerlifting/LiftTracker";
+import Training from "../powerlifting/Training";
 import WeightManagement from "../powerlifting/WeightManagement";
 import EquipmentChecklist from "../powerlifting/EquipmentChecklist";
 import Analytics from "../powerlifting/Analytics";
@@ -28,6 +29,8 @@ const Dashboard = () => {
         return <PowerliftingDashboard />;
       case "lifts":
         return <LiftTracker />;
+      case "training":
+        return <Training />;
       case "weight":
         return <WeightManagement />;
       case "equipment":

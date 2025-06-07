@@ -62,6 +62,50 @@ export const WEIGHT_CLASSES = {
   women: [47, 52, 57, 63, 72, 84, 84.1],
 };
 
+export interface TrainingEntry {
+  id?: string;
+  user_id?: string;
+  lift_type: "squat" | "bench" | "deadlift";
+  training_date: string;
+  sets: number;
+  reps: number;
+  weight: number;
+  rpe?: number;
+  volume?: number;
+  estimated_1rm?: number;
+  created_at?: string;
+}
+
+export interface TrainingFormData {
+  lift_type: "squat" | "bench" | "deadlift";
+  sets: number;
+  reps: number;
+  weight: number;
+  rpe?: number;
+}
+
+export interface TrainingAnalytics {
+  volumeProgression: {
+    date: string;
+    squat: number;
+    bench: number;
+    deadlift: number;
+  }[];
+  estimatedMaxProgression: {
+    date: string;
+    squat: number;
+    bench: number;
+    deadlift: number;
+  }[];
+  weeklyVolume: {
+    week: string;
+    squat: number;
+    bench: number;
+    deadlift: number;
+    total: number;
+  }[];
+}
+
 export const DEFAULT_EQUIPMENT: EquipmentItem[] = [
   {
     id: "1",
