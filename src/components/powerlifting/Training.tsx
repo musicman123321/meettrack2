@@ -1,3 +1,17 @@
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from "recharts";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
@@ -471,13 +485,12 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                   >
                     <div className="flex items-center gap-3">
                       <Badge
-                        className={`${
-                          entry.lift_type === "squat"
-                            ? "bg-red-500"
-                            : entry.lift_type === "bench"
-                              ? "bg-blue-500"
-                              : "bg-green-500"
-                        } text-white`}
+                        className={`${entry.lift_type === "squat"
+                          ? "bg-red-500"
+                          : entry.lift_type === "bench"
+                            ? "bg-blue-500"
+                            : "bg-green-500"
+                          } text-white`}
                       >
                         {entry.lift_type.charAt(0).toUpperCase() +
                           entry.lift_type.slice(1)}
@@ -507,50 +520,333 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
           </CardContent>
         </Card>
 
-        {/* Analytics Placeholder */}
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <BarChart3 className="h-5 w-5 text-purple-500" />
-              Training Analytics
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Visual analytics coming soon - volume progression, 1RM trends, and
-              weekly summaries
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-6 bg-gray-700/30 rounded-lg border border-gray-600">
-                <TrendingUp className="h-8 w-8 text-blue-400 mx-auto mb-2" />
-                <div className="text-sm font-medium text-white">
-                  Volume Progression
+        {/* Training Analytics */}
+        <div className="space-y-6">
+          {/* Volume Progression Chart */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <TrendingUp className="h-5 w-5 text-blue-400" />
+                Volume Progression
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Track your training volume over time by lift type
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analytics.volumeProgression.length > 0 ? (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={analytics.volumeProgression}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      />
+                      <YAxis
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => `${value}${state.unitPreference}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1F2937',
+                          border: '1px solid #374151',
+                          borderRadius: '8px',
+                          color: '#F9FAFB'
+                        }}
+                        labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                        formatter={(value: number, name: string) => [
+                          `${formatWeight(value)}`,
+                          name.charAt(0).toUpperCase() + name.slice(1)
+                        ]}
+                      />
+                      <Legend />
+                      {(filterLift === 'all' || filterLift === 'squat') && (
+                        <Area
+                          type="monotone"
+                          dataKey="squat"
+                          stackId="1"
+                          stroke="#EF4444"
+                          fill="#EF4444"
+                          fillOpacity={0.6}
+                          name="Squat"
+                        />
+                      )}
+                      {(filterLift === 'all' || filterLift === 'bench') && (
+                        <Area
+                          type="monotone"
+                          dataKey="bench"
+                          stackId="1"
+                          stroke="#3B82F6"
+                          fill="#3B82F6"
+                          fillOpacity={0.6}
+                          name="Bench"
+                        />
+                      )}
+                      {(filterLift === 'all' || filterLift === 'deadlift') && (
+                        <Area
+                          type="monotone"
+                          dataKey="deadlift"
+                          stackId="1"
+                          stroke="#10B981"
+                          fill="#10B981"
+                          fillOpacity={0.6}
+                          name="Deadlift"
+                        />
+                      )}
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Track volume over time
+              ) : (
+                <div className="h-80 flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No volume data available</p>
+                    <p className="text-sm mt-1">Start logging training sessions to see your progress</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 1RM Progression Chart */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Target className="h-5 w-5 text-green-400" />
+                Estimated 1RM Progression
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Track your estimated one-rep max improvements over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analytics.estimatedMaxProgression.length > 0 ? (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={analytics.estimatedMaxProgression}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      />
+                      <YAxis
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => `${value}${state.unitPreference}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1F2937',
+                          border: '1px solid #374151',
+                          borderRadius: '8px',
+                          color: '#F9FAFB'
+                        }}
+                        labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                        formatter={(value: number, name: string) => [
+                          `${formatWeight(value)}`,
+                          `${name.charAt(0).toUpperCase() + name.slice(1)} 1RM`
+                        ]}
+                      />
+                      <Legend />
+                      {(filterLift === 'all' || filterLift === 'squat') && (
+                        <Line
+                          type="monotone"
+                          dataKey="squat"
+                          stroke="#EF4444"
+                          strokeWidth={3}
+                          dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#EF4444', strokeWidth: 2 }}
+                          name="Squat"
+                        />
+                      )}
+                      {(filterLift === 'all' || filterLift === 'bench') && (
+                        <Line
+                          type="monotone"
+                          dataKey="bench"
+                          stroke="#3B82F6"
+                          strokeWidth={3}
+                          dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2 }}
+                          name="Bench"
+                        />
+                      )}
+                      {(filterLift === 'all' || filterLift === 'deadlift') && (
+                        <Line
+                          type="monotone"
+                          dataKey="deadlift"
+                          stroke="#10B981"
+                          strokeWidth={3}
+                          dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#10B981', strokeWidth: 2 }}
+                          name="Deadlift"
+                        />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-80 flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No 1RM progression data available</p>
+                    <p className="text-sm mt-1">Continue training to track your strength gains</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Weekly Volume Summary */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Calendar className="h-5 w-5 text-purple-400" />
+                Weekly Training Volume
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Weekly training load breakdown by lift type
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analytics.weeklyVolume.length > 0 ? (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={analytics.weeklyVolume}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis
+                        dataKey="week"
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getMonth() + 1}/${date.getDate()}`;
+                        }}
+                      />
+                      <YAxis
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => `${value}${state.unitPreference}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1F2937',
+                          border: '1px solid #374151',
+                          borderRadius: '8px',
+                          color: '#F9FAFB'
+                        }}
+                        labelFormatter={(value) => `Week of ${new Date(value).toLocaleDateString()}`}
+                        formatter={(value: number, name: string) => [
+                          `${formatWeight(value)}`,
+                          name.charAt(0).toUpperCase() + name.slice(1)
+                        ]}
+                      />
+                      <Legend />
+                      {(filterLift === 'all' || filterLift === 'squat') && (
+                        <Bar dataKey="squat" fill="#EF4444" name="Squat" />
+                      )}
+                      {(filterLift === 'all' || filterLift === 'bench') && (
+                        <Bar dataKey="bench" fill="#3B82F6" name="Bench" />
+                      )}
+                      {(filterLift === 'all' || filterLift === 'deadlift') && (
+                        <Bar dataKey="deadlift" fill="#10B981" name="Deadlift" />
+                      )}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-80 flex items-center justify-center text-gray-400">
+                  <div className="text-center">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No weekly volume data available</p>
+                    <p className="text-sm mt-1">Train consistently to see weekly patterns</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Training Insights */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Activity className="h-5 w-5 text-yellow-400" />
+                Training Insights
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Key metrics and trends from your training data
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-700/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-400">
+                    {analytics.weeklyVolume.length > 0
+                      ? Math.round(analytics.weeklyVolume[analytics.weeklyVolume.length - 1]?.total || 0)
+                      : 0
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">Last Week Volume</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {formatWeight(analytics.weeklyVolume.length > 0
+                      ? analytics.weeklyVolume[analytics.weeklyVolume.length - 1]?.total || 0
+                      : 0
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-gray-700/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-green-400">
+                    {analytics.estimatedMaxProgression.length > 0
+                      ? Math.max(
+                        analytics.estimatedMaxProgression[analytics.estimatedMaxProgression.length - 1]?.squat || 0,
+                        analytics.estimatedMaxProgression[analytics.estimatedMaxProgression.length - 1]?.bench || 0,
+                        analytics.estimatedMaxProgression[analytics.estimatedMaxProgression.length - 1]?.deadlift || 0
+                      ).toFixed(1)
+                      : 0
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">Peak Est. 1RM</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {state.unitPreference}
+                  </div>
+                </div>
+
+                <div className="bg-gray-700/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-400">
+                    {analytics.weeklyVolume.length}
+                  </div>
+                  <div className="text-sm text-gray-400">Training Weeks</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    In selected period
+                  </div>
+                </div>
+
+                <div className="bg-gray-700/50 p-4 rounded-lg">
+                  <div className="text-2xl font-bold text-red-400">
+                    {analytics.volumeProgression.length > 0 && analytics.weeklyVolume.length > 1
+                      ? (
+                        ((analytics.weeklyVolume[analytics.weeklyVolume.length - 1]?.total || 0) -
+                          (analytics.weeklyVolume[analytics.weeklyVolume.length - 2]?.total || 0)) /
+                        (analytics.weeklyVolume[analytics.weeklyVolume.length - 2]?.total || 1) * 100
+                      ).toFixed(1)
+                      : 0
+                    }%
+                  </div>
+                  <div className="text-sm text-gray-400">Volume Change</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Week over week
+                  </div>
                 </div>
               </div>
-              <div className="text-center p-6 bg-gray-700/30 rounded-lg border border-gray-600">
-                <Target className="h-8 w-8 text-green-400 mx-auto mb-2" />
-                <div className="text-sm font-medium text-white">
-                  1RM Progression
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Estimated max trends
-                </div>
-              </div>
-              <div className="text-center p-6 bg-gray-700/30 rounded-lg border border-gray-600">
-                <Calendar className="h-8 w-8 text-purple-400 mx-auto mb-2" />
-                <div className="text-sm font-medium text-white">
-                  Weekly Volume
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Weekly training load
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
