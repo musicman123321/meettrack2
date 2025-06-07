@@ -28,6 +28,7 @@ interface SidebarProps {
 const navItems: NavItem[] = [
   { icon: <LayoutDashboard size={18} />, label: "Dashboard", key: "dashboard" },
   { icon: <Target size={18} />, label: "Lift Tracking", key: "lifts" },
+  { icon: <Dumbbell size={18} />, label: "Training", key: "training" },
   { icon: <Scale size={18} />, label: "Weight Management", key: "weight" },
   { icon: <CheckSquare size={18} />, label: "Equipment", key: "equipment" },
   { icon: <BarChart3 size={18} />, label: "Analytics", key: "analytics" },

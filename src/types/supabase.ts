@@ -238,6 +238,48 @@ export type Database = {
           },
         ]
       }
+      training_history: {
+        Row: {
+          created_at: string | null
+          estimated_1rm: number | null
+          id: string
+          lift_type: string | null
+          reps: number
+          rpe: number | null
+          sets: number
+          training_date: string
+          user_id: string | null
+          volume: number | null
+          weight: number
+        }
+        Insert: {
+          created_at?: string | null
+          estimated_1rm?: number | null
+          id?: string
+          lift_type?: string | null
+          reps: number
+          rpe?: number | null
+          sets: number
+          training_date: string
+          user_id?: string | null
+          volume?: number | null
+          weight: number
+        }
+        Update: {
+          created_at?: string | null
+          estimated_1rm?: number | null
+          id?: string
+          lift_type?: string | null
+          reps?: number
+          rpe?: number | null
+          sets?: number
+          training_date?: string
+          user_id?: string | null
+          volume?: number | null
+          weight?: number
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           created_at: string

@@ -14,6 +14,9 @@ import {
   EquipmentItem,
   WeightEntry,
   UserSettings,
+  TrainingEntry,
+  TrainingFormData,
+  TrainingAnalytics,
   DEFAULT_EQUIPMENT,
 } from "../types/powerlifting";
 import { supabase } from "../../supabase/supabase";
@@ -140,6 +143,9 @@ interface PowerliftingContextType {
     toUnit?: "kg" | "lbs",
   ) => number;
   formatWeight: (weight: number, unit?: "kg" | "lbs") => string;
+  addTrainingEntry: (entry: TrainingFormData) => Promise<void>;
+  getTrainingHistory: (days?: number) => Promise<TrainingEntry[]>;
+  getTrainingAnalytics: (days?: number) => Promise<TrainingAnalytics>;
 }
 
 const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
@@ -774,6 +780,198 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     return `${convertedWeight}${displayUnit}`;
   };
 
+  // Add training entry to Supabase
+  const addTrainingEntry = async (entry: TrainingFormData) => {
+    if (!user?.id) {
+      errorLog("No user found when adding training entry", null);
+      return;
+    }
+
+    try {
+      debugLog("Adding training entry:", entry);
+      const { error } = await supabase.from("training_history").insert({
+        user_id: user.id,
+        lift_type: entry.lift_type,
+        training_date: new Date().toISOString().split("T")[0],
+        sets: entry.sets,
+        reps: entry.reps,
+        weight: entry.weight,
+        rpe: entry.rpe || null,
+      });
+
+      if (error) {
+        throw new Error(`Failed to add training entry: ${error.message}`);
+      }
+
+      debugLog("Successfully added training entry");
+    } catch (err: any) {
+      errorLog("Error adding training entry", err);
+      throw err;
+    }
+  };
+
+  // Get training history from Supabase
+  const getTrainingHistory = async (
+    days: number = 30,
+  ): Promise<TrainingEntry[]> => {
+    if (!user?.id) {
+      errorLog("No user found when fetching training history", null);
+      return [];
+    }
+
+    try {
+      debugLog("Fetching training history for last", days, "days");
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data, error } = await supabase
+        .from("training_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("training_date", startDate.toISOString().split("T")[0])
+        .order("training_date", { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch training history: ${error.message}`);
+      }
+
+      debugLog("Successfully fetched training history:", data);
+      return data || [];
+    } catch (err: any) {
+      errorLog("Error fetching training history", err);
+      return [];
+    }
+  };
+
+  // Get training analytics from Supabase
+  const getTrainingAnalytics = async (
+    days: number = 90,
+  ): Promise<TrainingAnalytics> => {
+    if (!user?.id) {
+      errorLog("No user found when fetching training analytics", null);
+      return {
+        volumeProgression: [],
+        estimatedMaxProgression: [],
+        weeklyVolume: [],
+      };
+    }
+
+    try {
+      debugLog("Fetching training analytics for last", days, "days");
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const { data, error } = await supabase
+        .from("training_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("training_date", startDate.toISOString().split("T")[0])
+        .order("training_date", { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to fetch training analytics: ${error.message}`);
+      }
+
+      debugLog("Successfully fetched training analytics data:", data);
+
+      // Process data for analytics
+      const entries = data || [];
+      const analytics: TrainingAnalytics = {
+        volumeProgression: [],
+        estimatedMaxProgression: [],
+        weeklyVolume: [],
+      };
+
+      // Group by date for volume and 1RM progression
+      const dateGroups = entries.reduce(
+        (acc, entry) => {
+          const date = entry.training_date;
+          if (!acc[date]) {
+            acc[date] = { squat: 0, bench: 0, deadlift: 0 };
+          }
+          acc[date][entry.lift_type] += entry.volume || 0;
+          return acc;
+        },
+        {} as Record<
+          string,
+          { squat: number; bench: number; deadlift: number }
+        >,
+      );
+
+      // Volume progression
+      analytics.volumeProgression = Object.entries(dateGroups).map(
+        ([date, volumes]) => ({
+          date,
+          ...volumes,
+        }),
+      );
+
+      // Estimated 1RM progression (take max per day per lift)
+      const maxGroups = entries.reduce(
+        (acc, entry) => {
+          const date = entry.training_date;
+          if (!acc[date]) {
+            acc[date] = { squat: 0, bench: 0, deadlift: 0 };
+          }
+          acc[date][entry.lift_type] = Math.max(
+            acc[date][entry.lift_type],
+            entry.estimated_1rm || 0,
+          );
+          return acc;
+        },
+        {} as Record<
+          string,
+          { squat: number; bench: number; deadlift: number }
+        >,
+      );
+
+      analytics.estimatedMaxProgression = Object.entries(maxGroups).map(
+        ([date, maxes]) => ({
+          date,
+          ...maxes,
+        }),
+      );
+
+      // Weekly volume (group by week)
+      const weekGroups = entries.reduce(
+        (acc, entry) => {
+          const date = new Date(entry.training_date);
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          const weekKey = weekStart.toISOString().split("T")[0];
+
+          if (!acc[weekKey]) {
+            acc[weekKey] = { squat: 0, bench: 0, deadlift: 0, total: 0 };
+          }
+          const volume = entry.volume || 0;
+          acc[weekKey][entry.lift_type] += volume;
+          acc[weekKey].total += volume;
+          return acc;
+        },
+        {} as Record<
+          string,
+          { squat: number; bench: number; deadlift: number; total: number }
+        >,
+      );
+
+      analytics.weeklyVolume = Object.entries(weekGroups).map(
+        ([week, volumes]) => ({
+          week,
+          ...volumes,
+        }),
+      );
+
+      return analytics;
+    } catch (err: any) {
+      errorLog("Error fetching training analytics", err);
+      return {
+        volumeProgression: [],
+        estimatedMaxProgression: [],
+        weeklyVolume: [],
+      };
+    }
+  };
+
   // Refresh all data
   const refreshData = async () => {
     await fetchUserData();
@@ -801,6 +999,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         saveUserSettings,
         convertWeight,
         formatWeight,
+        addTrainingEntry,
+        getTrainingHistory,
+        getTrainingAnalytics,
       }}
     >
       {children}
