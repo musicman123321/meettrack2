@@ -340,20 +340,20 @@ export default function Home() {
               🚧 This app is in beta and completely free to use!
             </span>
             <span className="text-gray-600 text-sm">
-  <a
-    href="#support"
-    className="text-red-600 hover:text-red-700 font-medium underline"
-  >
-    Support development
-  </a>{" "}
-  or report bugs at{" "}
-  <a
-    href="mailto:meettrackdev@gmail.com"
-    className="text-red-600 hover:text-red-700 font-medium underline"
-  >
-    meettrackdev@gmail.com
-  </a>
-</span>
+              <a
+                href="#support"
+                className="text-red-600 hover:text-red-700 font-medium underline"
+              >
+                Support development
+              </a>{" "}
+              or report bugs at{" "}
+              <a
+                href="mailto:meettrackdev@gmail.com"
+                className="text-red-600 hover:text-red-700 font-medium underline"
+              >
+                meettrackdev@gmail.com
+              </a>
+            </span>
 
           </div>
         </div>
