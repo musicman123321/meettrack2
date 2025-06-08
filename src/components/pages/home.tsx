@@ -333,13 +333,20 @@ export default function Home() {
         </div>
       </header>
       {/* Beta Notice */}
-      <section className="bg-orange-50 border-b border-orange-200 py-3">
+      <section className="bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-200 py-4">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center gap-2 text-center">
-            <span className="text-orange-600 font-medium text-sm">
-              🚧 This app is in beta. It's free to use for now, but if you'd
-              like to support continued development, please consider donating.
-              Send bug reports or ideas to meettrackdev@gmail.com.
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <span className="text-orange-700 font-medium text-sm sm:text-base">
+              🚧 This app is in beta and completely free to use!
+            </span>
+            <span className="text-gray-600 text-sm">
+              Support development or report bugs at{" "}
+              <a
+                href="mailto:meettrackdev@gmail.com"
+                className="text-red-600 hover:text-red-700 font-medium underline"
+              >
+                meettrackdev@gmail.com
+              </a>
             </span>
           </div>
         </div>
