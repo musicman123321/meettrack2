@@ -436,7 +436,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      {/* Testimonials Section */}
+      {/* Testimonials Section
       <section className="py-12 sm:py-20 px-4 bg-gray-50">
         <div className="container mx-auto">
           <div className="text-center mb-12 sm:mb-16">
@@ -485,7 +485,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
       {/* Support Section */}
       <section className="py-16 sm:py-20 px-4 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="container mx-auto">
