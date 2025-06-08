@@ -58,39 +58,41 @@ const Sidebar = ({
   );
 
   return (
-    <div className="w-[240px] h-full border-r border-gray-700 bg-gray-800 flex flex-col">
-      <div className="p-4">
+    <div className="w-full md:w-[240px] lg:w-[260px] h-full border-r border-gray-700 bg-gray-800 flex flex-col">
+      <div className="p-3 md:p-4">
         <div className="flex items-center gap-2 mb-2">
-          <Dumbbell className="h-6 w-6 text-red-500" />
-          <h2 className="text-lg font-semibold text-white">Meet Prep</h2>
+          <Dumbbell className="h-5 w-5 md:h-6 md:w-6 text-red-500" />
+          <h2 className="text-base md:text-lg font-semibold text-white">
+            Meet Prep
+          </h2>
         </div>
-        <p className="text-sm text-gray-400">
+        <p className="text-xs md:text-sm text-gray-400 hidden sm:block">
           Track your powerlifting preparation
         </p>
       </div>
 
-      <ScrollArea className="flex-1 px-3">
+      <ScrollArea className="flex-1 px-2 md:px-3">
         <div className="space-y-1">
           {navItems.map((item) => (
             <Button
               key={item.key}
               variant={item.key === activeItem ? "secondary" : "ghost"}
-              className={`w-full justify-start gap-2 text-sm h-10 ${
+              className={`w-full justify-start gap-2 text-xs md:text-sm h-10 md:h-11 touch-target ${
                 item.key === activeItem
                   ? "bg-red-600 text-white hover:bg-red-700"
                   : "text-gray-300 hover:bg-gray-700 hover:text-white"
               }`}
               onClick={() => onItemClick(item.key)}
             >
-              {item.icon}
-              {item.label}
+              <span className="flex-shrink-0">{item.icon}</span>
+              <span className="hidden sm:inline truncate">{item.label}</span>
             </Button>
           ))}
         </div>
 
         <Separator className="my-4 bg-gray-700" />
 
-        <div className="space-y-1">
+        <div className="space-y-1 hidden md:block">
           <h3 className="text-xs font-medium px-3 py-2 text-gray-500">
             Quick Stats
           </h3>
@@ -115,16 +117,16 @@ const Sidebar = ({
         </div>
       </ScrollArea>
 
-      <div className="p-3 mt-auto border-t border-gray-700">
+      <div className="p-2 md:p-3 mt-auto border-t border-gray-700">
         {bottomItems.map((item) => (
           <Button
             key={item.key}
             variant="ghost"
-            className="w-full justify-start gap-2 text-sm h-10 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white"
+            className="w-full justify-start gap-2 text-xs md:text-sm h-10 md:h-11 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white touch-target"
             onClick={() => onItemClick(item.key)}
           >
-            {item.icon}
-            {item.label}
+            <span className="flex-shrink-0">{item.icon}</span>
+            <span className="hidden sm:inline truncate">{item.label}</span>
           </Button>
         ))}
       </div>

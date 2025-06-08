@@ -220,31 +220,33 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
 
   return (
     <div
-      className={`min-h-screen bg-gray-900 text-white p-4 md:p-6 ${className}`}
+      className={`min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6 ${className}`}
     >
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-6">
-          <Dumbbell className="h-6 w-6 text-blue-400" />
-          <h2 className="text-2xl font-bold text-white">Training Log</h2>
+        <div className="flex items-center gap-2 mb-4 md:mb-6">
+          <Dumbbell className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
+          <h2 className="text-xl sm:text-2xl font-bold text-white">
+            Training Log
+          </h2>
         </div>
 
         {/* Training Form */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Plus className="h-5 w-5 text-green-500" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
               Log Training Session
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-gray-400 text-sm">
               Record your daily training for squat, bench press, or deadlift
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                 <div>
-                  <Label htmlFor="lift_type" className="text-gray-300">
+                  <Label htmlFor="lift_type" className="text-gray-300 text-sm">
                     Lift Type
                   </Label>
                   <Select
@@ -253,7 +255,7 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                       handleInputChange("lift_type", value)
                     }
                   >
-                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white h-10 sm:h-11 touch-target">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-700 border-gray-600">
@@ -265,7 +267,7 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                 </div>
 
                 <div>
-                  <Label htmlFor="sets" className="text-gray-300">
+                  <Label htmlFor="sets" className="text-gray-300 text-sm">
                     Sets
                   </Label>
                   <Input
@@ -276,12 +278,12 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                     onChange={(e) =>
                       handleInputChange("sets", parseInt(e.target.value) || 0)
                     }
-                    className="bg-gray-700 border-gray-600 text-white"
+                    className="bg-gray-700 border-gray-600 text-white h-10 sm:h-11 touch-target"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="reps" className="text-gray-300">
+                  <Label htmlFor="reps" className="text-gray-300 text-sm">
                     Reps
                   </Label>
                   <Input
@@ -292,12 +294,12 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                     onChange={(e) =>
                       handleInputChange("reps", parseInt(e.target.value) || 0)
                     }
-                    className="bg-gray-700 border-gray-600 text-white"
+                    className="bg-gray-700 border-gray-600 text-white h-10 sm:h-11 touch-target"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="weight" className="text-gray-300">
+                  <Label htmlFor="weight" className="text-gray-300 text-sm">
                     Weight ({state.unitPreference})
                   </Label>
                   <Input
@@ -312,12 +314,12 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                         parseFloat(e.target.value) || 0,
                       )
                     }
-                    className="bg-gray-700 border-gray-600 text-white"
+                    className="bg-gray-700 border-gray-600 text-white h-10 sm:h-11 touch-target"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="rpe" className="text-gray-300">
+                  <Label htmlFor="rpe" className="text-gray-300 text-sm">
                     RPE (Optional)
                   </Label>
                   <Input
@@ -334,31 +336,35 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                       )
                     }
                     placeholder="1-10"
-                    className="bg-gray-700 border-gray-600 text-white"
+                    className="bg-gray-700 border-gray-600 text-white h-10 sm:h-11 touch-target"
                   />
                 </div>
               </div>
 
               {/* Calculated Values */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-700/50 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-700/50 rounded-lg">
                 <div className="text-center">
-                  <div className="text-lg font-bold text-blue-400">
+                  <div className="text-base sm:text-lg font-bold text-blue-400">
                     {calculateVolume().toFixed(1)}
                   </div>
-                  <div className="text-sm text-gray-400">Total Volume</div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    Total Volume
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-green-400">
+                  <div className="text-base sm:text-lg font-bold text-green-400">
                     {calculateEstimated1RM().toFixed(1)} {state.unitPreference}
                   </div>
-                  <div className="text-sm text-gray-400">Estimated 1RM</div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    Estimated 1RM
+                  </div>
                 </div>
               </div>
 
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full bg-blue-600 hover:bg-blue-700 h-10 sm:h-11 touch-target text-sm sm:text-base"
               >
                 {isSubmitting ? "Logging..." : "Log Training Session"}
               </Button>
@@ -367,60 +373,66 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-white">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {stats.totalSessions}
               </div>
-              <div className="text-sm text-gray-400">Recent Sessions</div>
+              <div className="text-xs sm:text-sm text-gray-400">
+                Recent Sessions
+              </div>
             </CardContent>
           </Card>
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-400">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-blue-400">
                 {formatWeight(stats.totalVolume)}
               </div>
-              <div className="text-sm text-gray-400">Total Volume</div>
+              <div className="text-xs sm:text-sm text-gray-400">
+                Total Volume
+              </div>
             </CardContent>
           </Card>
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-400">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-green-400">
                 {stats.avgRPE ? stats.avgRPE.toFixed(1) : "N/A"}
               </div>
-              <div className="text-sm text-gray-400">Avg RPE</div>
+              <div className="text-xs sm:text-sm text-gray-400">Avg RPE</div>
             </CardContent>
           </Card>
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
-              <div className="text-lg font-bold text-red-400">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-base sm:text-lg font-bold text-red-400">
                 S: {formatWeight(stats.maxEstimated1RM.squat)}
               </div>
-              <div className="text-sm text-gray-400">Max Est. 1RM</div>
+              <div className="text-xs sm:text-sm text-gray-400">
+                Max Est. 1RM
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Filter className="h-5 w-5 text-purple-500" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+              <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
               Analytics Filters
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <div>
-                <Label className="text-gray-300">Lift Type</Label>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="flex-1">
+                <Label className="text-gray-300 text-sm">Lift Type</Label>
                 <Select
                   value={filterLift}
                   onValueChange={(
                     value: "all" | "squat" | "bench" | "deadlift",
                   ) => setFilterLift(value)}
                 >
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-32">
+                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-full sm:w-32 h-10 sm:h-11 touch-target">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-700 border-gray-600">
@@ -432,13 +444,13 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-gray-300">Time Period</Label>
+              <div className="flex-1">
+                <Label className="text-gray-300 text-sm">Time Period</Label>
                 <Select
                   value={filterDays.toString()}
                   onValueChange={(value) => setFilterDays(parseInt(value))}
                 >
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-32">
+                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white w-full sm:w-32 h-10 sm:h-11 touch-target">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-700 border-gray-600">
@@ -455,16 +467,16 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
 
         {/* Recent Training History */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Activity className="h-5 w-5 text-blue-500" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               Recent Training Sessions
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-gray-400 text-sm">
               Your latest training entries
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {loading ? (
               <div className="text-center py-8">
                 <div className="text-gray-400">Loading training history...</div>
@@ -481,25 +493,26 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                 {filteredHistory.slice(0, 10).map((entry, index) => (
                   <div
                     key={entry.id || index}
-                    className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-700/50 rounded-lg gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <Badge
-                        className={`${entry.lift_type === "squat"
-                          ? "bg-red-500"
-                          : entry.lift_type === "bench"
-                            ? "bg-blue-500"
-                            : "bg-green-500"
-                          } text-white`}
+                        className={`${
+                          entry.lift_type === "squat"
+                            ? "bg-red-500"
+                            : entry.lift_type === "bench"
+                              ? "bg-blue-500"
+                              : "bg-green-500"
+                        } text-white text-xs`}
                       >
                         {entry.lift_type.charAt(0).toUpperCase() +
                           entry.lift_type.slice(1)}
                       </Badge>
-                      <div className="text-sm text-gray-300">
+                      <div className="text-xs sm:text-sm text-gray-300">
                         {new Date(entry.training_date).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                       <div className="text-gray-300">
                         {entry.sets}×{entry.reps} @ {formatWeight(entry.weight)}
                       </div>
@@ -524,18 +537,18 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
         <div className="space-y-6">
           {/* Volume Progression Chart */}
           <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <TrendingUp className="h-5 w-5 text-blue-400" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
                 Volume Progression
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-gray-400 text-sm">
                 Track your training volume over time by lift type
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               {analytics.volumeProgression.length > 0 ? (
-                <div className="h-80">
+                <div className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={analytics.volumeProgression}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -543,28 +556,37 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                         dataKey="date"
                         stroke="#9CA3AF"
                         fontSize={12}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        tickFormatter={(value) =>
+                          new Date(value).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        }
                       />
                       <YAxis
                         stroke="#9CA3AF"
                         fontSize={12}
-                        tickFormatter={(value) => `${value}${state.unitPreference}`}
+                        tickFormatter={(value) =>
+                          `${value}${state.unitPreference}`
+                        }
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1F2937',
-                          border: '1px solid #374151',
-                          borderRadius: '8px',
-                          color: '#F9FAFB'
+                          backgroundColor: "#1F2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          color: "#F9FAFB",
                         }}
-                        labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                        labelFormatter={(value) =>
+                          new Date(value).toLocaleDateString()
+                        }
                         formatter={(value: number, name: string) => [
                           `${formatWeight(value)}`,
-                          name.charAt(0).toUpperCase() + name.slice(1)
+                          name.charAt(0).toUpperCase() + name.slice(1),
                         ]}
                       />
                       <Legend />
-                      {(filterLift === 'all' || filterLift === 'squat') && (
+                      {(filterLift === "all" || filterLift === "squat") && (
                         <Area
                           type="monotone"
                           dataKey="squat"
@@ -575,7 +597,7 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                           name="Squat"
                         />
                       )}
-                      {(filterLift === 'all' || filterLift === 'bench') && (
+                      {(filterLift === "all" || filterLift === "bench") && (
                         <Area
                           type="monotone"
                           dataKey="bench"
@@ -586,7 +608,7 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                           name="Bench"
                         />
                       )}
-                      {(filterLift === 'all' || filterLift === 'deadlift') && (
+                      {(filterLift === "all" || filterLift === "deadlift") && (
                         <Area
                           type="monotone"
                           dataKey="deadlift"
@@ -605,7 +627,9 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                   <div className="text-center">
                     <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No volume data available</p>
-                    <p className="text-sm mt-1">Start logging training sessions to see your progress</p>
+                    <p className="text-sm mt-1">
+                      Start logging training sessions to see your progress
+                    </p>
                   </div>
                 </div>
               )}
@@ -614,18 +638,18 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
 
           {/* 1RM Progression Chart */}
           <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Target className="h-5 w-5 text-green-400" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
                 Estimated 1RM Progression
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-gray-400 text-sm">
                 Track your estimated one-rep max improvements over time
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               {analytics.estimatedMaxProgression.length > 0 ? (
-                <div className="h-80">
+                <div className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={analytics.estimatedMaxProgression}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -633,57 +657,78 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                         dataKey="date"
                         stroke="#9CA3AF"
                         fontSize={12}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        tickFormatter={(value) =>
+                          new Date(value).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        }
                       />
                       <YAxis
                         stroke="#9CA3AF"
                         fontSize={12}
-                        tickFormatter={(value) => `${value}${state.unitPreference}`}
+                        tickFormatter={(value) =>
+                          `${value}${state.unitPreference}`
+                        }
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1F2937',
-                          border: '1px solid #374151',
-                          borderRadius: '8px',
-                          color: '#F9FAFB'
+                          backgroundColor: "#1F2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          color: "#F9FAFB",
                         }}
-                        labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                        labelFormatter={(value) =>
+                          new Date(value).toLocaleDateString()
+                        }
                         formatter={(value: number, name: string) => [
                           `${formatWeight(value)}`,
-                          `${name.charAt(0).toUpperCase() + name.slice(1)} 1RM`
+                          `${name.charAt(0).toUpperCase() + name.slice(1)} 1RM`,
                         ]}
                       />
                       <Legend />
-                      {(filterLift === 'all' || filterLift === 'squat') && (
+                      {(filterLift === "all" || filterLift === "squat") && (
                         <Line
                           type="monotone"
                           dataKey="squat"
                           stroke="#EF4444"
                           strokeWidth={3}
-                          dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
-                          activeDot={{ r: 6, stroke: '#EF4444', strokeWidth: 2 }}
+                          dot={{ fill: "#EF4444", strokeWidth: 2, r: 4 }}
+                          activeDot={{
+                            r: 6,
+                            stroke: "#EF4444",
+                            strokeWidth: 2,
+                          }}
                           name="Squat"
                         />
                       )}
-                      {(filterLift === 'all' || filterLift === 'bench') && (
+                      {(filterLift === "all" || filterLift === "bench") && (
                         <Line
                           type="monotone"
                           dataKey="bench"
                           stroke="#3B82F6"
                           strokeWidth={3}
-                          dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                          activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2 }}
+                          dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
+                          activeDot={{
+                            r: 6,
+                            stroke: "#3B82F6",
+                            strokeWidth: 2,
+                          }}
                           name="Bench"
                         />
                       )}
-                      {(filterLift === 'all' || filterLift === 'deadlift') && (
+                      {(filterLift === "all" || filterLift === "deadlift") && (
                         <Line
                           type="monotone"
                           dataKey="deadlift"
                           stroke="#10B981"
                           strokeWidth={3}
-                          dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                          activeDot={{ r: 6, stroke: '#10B981', strokeWidth: 2 }}
+                          dot={{ fill: "#10B981", strokeWidth: 2, r: 4 }}
+                          activeDot={{
+                            r: 6,
+                            stroke: "#10B981",
+                            strokeWidth: 2,
+                          }}
                           name="Deadlift"
                         />
                       )}
@@ -695,7 +740,9 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                   <div className="text-center">
                     <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No 1RM progression data available</p>
-                    <p className="text-sm mt-1">Continue training to track your strength gains</p>
+                    <p className="text-sm mt-1">
+                      Continue training to track your strength gains
+                    </p>
                   </div>
                 </div>
               )}
@@ -704,18 +751,18 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
 
           {/* Weekly Volume Summary */}
           <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Calendar className="h-5 w-5 text-purple-400" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
                 Weekly Training Volume
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-gray-400 text-sm">
                 Weekly training load breakdown by lift type
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               {analytics.weeklyVolume.length > 0 ? (
-                <div className="h-80">
+                <div className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={analytics.weeklyVolume}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -731,30 +778,38 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                       <YAxis
                         stroke="#9CA3AF"
                         fontSize={12}
-                        tickFormatter={(value) => `${value}${state.unitPreference}`}
+                        tickFormatter={(value) =>
+                          `${value}${state.unitPreference}`
+                        }
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1F2937',
-                          border: '1px solid #374151',
-                          borderRadius: '8px',
-                          color: '#F9FAFB'
+                          backgroundColor: "#1F2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          color: "#F9FAFB",
                         }}
-                        labelFormatter={(value) => `Week of ${new Date(value).toLocaleDateString()}`}
+                        labelFormatter={(value) =>
+                          `Week of ${new Date(value).toLocaleDateString()}`
+                        }
                         formatter={(value: number, name: string) => [
                           `${formatWeight(value)}`,
-                          name.charAt(0).toUpperCase() + name.slice(1)
+                          name.charAt(0).toUpperCase() + name.slice(1),
                         ]}
                       />
                       <Legend />
-                      {(filterLift === 'all' || filterLift === 'squat') && (
+                      {(filterLift === "all" || filterLift === "squat") && (
                         <Bar dataKey="squat" fill="#EF4444" name="Squat" />
                       )}
-                      {(filterLift === 'all' || filterLift === 'bench') && (
+                      {(filterLift === "all" || filterLift === "bench") && (
                         <Bar dataKey="bench" fill="#3B82F6" name="Bench" />
                       )}
-                      {(filterLift === 'all' || filterLift === 'deadlift') && (
-                        <Bar dataKey="deadlift" fill="#10B981" name="Deadlift" />
+                      {(filterLift === "all" || filterLift === "deadlift") && (
+                        <Bar
+                          dataKey="deadlift"
+                          fill="#10B981"
+                          name="Deadlift"
+                        />
                       )}
                     </BarChart>
                   </ResponsiveContainer>
@@ -764,7 +819,9 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
                   <div className="text-center">
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No weekly volume data available</p>
-                    <p className="text-sm mt-1">Train consistently to see weekly patterns</p>
+                    <p className="text-sm mt-1">
+                      Train consistently to see weekly patterns
+                    </p>
                   </div>
                 </div>
               )}
@@ -773,72 +830,99 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
 
           {/* Training Insights */}
           <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Activity className="h-5 w-5 text-yellow-400" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-white text-base sm:text-lg">
+                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
                 Training Insights
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-gray-400 text-sm">
                 Key metrics and trends from your training data
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gray-700/50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-400">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="bg-gray-700/50 p-3 sm:p-4 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-blue-400">
                     {analytics.weeklyVolume.length > 0
-                      ? Math.round(analytics.weeklyVolume[analytics.weeklyVolume.length - 1]?.total || 0)
-                      : 0
-                    }
+                      ? Math.round(
+                          analytics.weeklyVolume[
+                            analytics.weeklyVolume.length - 1
+                          ]?.total || 0,
+                        )
+                      : 0}
                   </div>
-                  <div className="text-sm text-gray-400">Last Week Volume</div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    Last Week Volume
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    {formatWeight(analytics.weeklyVolume.length > 0
-                      ? analytics.weeklyVolume[analytics.weeklyVolume.length - 1]?.total || 0
-                      : 0
+                    {formatWeight(
+                      analytics.weeklyVolume.length > 0
+                        ? analytics.weeklyVolume[
+                            analytics.weeklyVolume.length - 1
+                          ]?.total || 0
+                        : 0,
                     )}
                   </div>
                 </div>
 
-                <div className="bg-gray-700/50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-green-400">
+                <div className="bg-gray-700/50 p-3 sm:p-4 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-green-400">
                     {analytics.estimatedMaxProgression.length > 0
                       ? Math.max(
-                        analytics.estimatedMaxProgression[analytics.estimatedMaxProgression.length - 1]?.squat || 0,
-                        analytics.estimatedMaxProgression[analytics.estimatedMaxProgression.length - 1]?.bench || 0,
-                        analytics.estimatedMaxProgression[analytics.estimatedMaxProgression.length - 1]?.deadlift || 0
-                      ).toFixed(1)
-                      : 0
-                    }
+                          analytics.estimatedMaxProgression[
+                            analytics.estimatedMaxProgression.length - 1
+                          ]?.squat || 0,
+                          analytics.estimatedMaxProgression[
+                            analytics.estimatedMaxProgression.length - 1
+                          ]?.bench || 0,
+                          analytics.estimatedMaxProgression[
+                            analytics.estimatedMaxProgression.length - 1
+                          ]?.deadlift || 0,
+                        ).toFixed(1)
+                      : 0}
                   </div>
-                  <div className="text-sm text-gray-400">Peak Est. 1RM</div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    Peak Est. 1RM
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">
                     {state.unitPreference}
                   </div>
                 </div>
 
-                <div className="bg-gray-700/50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-400">
+                <div className="bg-gray-700/50 p-3 sm:p-4 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-purple-400">
                     {analytics.weeklyVolume.length}
                   </div>
-                  <div className="text-sm text-gray-400">Training Weeks</div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    Training Weeks
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">
                     In selected period
                   </div>
                 </div>
 
-                <div className="bg-gray-700/50 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-red-400">
-                    {analytics.volumeProgression.length > 0 && analytics.weeklyVolume.length > 1
+                <div className="bg-gray-700/50 p-3 sm:p-4 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-red-400">
+                    {analytics.volumeProgression.length > 0 &&
+                    analytics.weeklyVolume.length > 1
                       ? (
-                        ((analytics.weeklyVolume[analytics.weeklyVolume.length - 1]?.total || 0) -
-                          (analytics.weeklyVolume[analytics.weeklyVolume.length - 2]?.total || 0)) /
-                        (analytics.weeklyVolume[analytics.weeklyVolume.length - 2]?.total || 1) * 100
-                      ).toFixed(1)
-                      : 0
-                    }%
+                          (((analytics.weeklyVolume[
+                            analytics.weeklyVolume.length - 1
+                          ]?.total || 0) -
+                            (analytics.weeklyVolume[
+                              analytics.weeklyVolume.length - 2
+                            ]?.total || 0)) /
+                            (analytics.weeklyVolume[
+                              analytics.weeklyVolume.length - 2
+                            ]?.total || 1)) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
                   </div>
-                  <div className="text-sm text-gray-400">Volume Change</div>
+                  <div className="text-xs sm:text-sm text-gray-400">
+                    Volume Change
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">
                     Week over week
                   </div>

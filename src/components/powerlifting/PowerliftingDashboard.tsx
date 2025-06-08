@@ -150,19 +150,22 @@ export default function PowerliftingDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-6">
+    <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6">
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-7xl mx-auto space-y-6"
+        className="max-w-7xl mx-auto space-y-4 md:space-y-6"
       >
         {/* Header */}
-        <motion.div variants={itemVariants} className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-red-500 to-blue-500 bg-clip-text text-transparent">
+        <motion.div
+          variants={itemVariants}
+          className="text-center mb-6 md:mb-8"
+        >
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-red-500 to-blue-500 bg-clip-text text-transparent">
             Meet Prep Tracker
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-400 text-sm sm:text-base md:text-lg">
             {state.meetInfo.meetName || "Your Next Competition"}
           </p>
         </motion.div>
@@ -170,13 +173,14 @@ export default function PowerliftingDashboard() {
         {/* Quick Actions Bar */}
         <motion.div
           variants={itemVariants}
-          className="flex justify-center gap-4 mb-6"
+          className="flex justify-center gap-2 sm:gap-4 mb-4 md:mb-6"
         >
           <Dialog open={quickWeightOpen} onOpenChange={setQuickWeightOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Log Weight
+              <Button className="bg-blue-600 hover:bg-blue-700 text-sm sm:text-base touch-target">
+                <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Log Weight</span>
+                <span className="sm:hidden">Weight</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-gray-800 border-gray-700 text-white">
@@ -226,41 +230,41 @@ export default function PowerliftingDashboard() {
         {/* Stats Overview */}
         <motion.div
           variants={itemVariants}
-          className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 md:mb-8"
         >
           <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
                   Days Until Meet
                 </CardTitle>
-                <Clock className="h-4 w-4 text-red-500" />
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {daysUntilMeet}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1 truncate">
                 {state.meetInfo.meetName || "Competition"}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-400 mt-1 hidden sm:block">
                 {new Date(state.meetInfo.meetDate).toLocaleDateString()}
               </p>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
                   Current Total
                 </CardTitle>
-                <Dumbbell className="h-4 w-4 text-blue-500" />
+                <Dumbbell className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {formatWeight(totalLifts)}
               </div>
               <p className="text-xs text-gray-500 mt-1">Wilks: {wilksScore}</p>
@@ -268,42 +272,44 @@ export default function PowerliftingDashboard() {
           </Card>
 
           <Card
-            className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer"
+            className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target"
             onClick={() => setQuickWeightOpen(true)}
           >
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
                   Body Weight
                 </CardTitle>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <Plus className="h-3 w-3 text-gray-500" />
-                  <Scale className="h-4 w-4 text-green-500" />
+                  <Scale className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {formatWeight(state.currentStats.weight)}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1 truncate">
                 Target: {formatWeight(state.meetInfo.targetWeightClass)} class
               </p>
-              <p className="text-xs text-blue-400 mt-1">Click to log weight</p>
+              <p className="text-xs text-blue-400 mt-1 hidden sm:block">
+                Click to log weight
+              </p>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-400">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
                   Equipment Ready
                 </CardTitle>
-                <CheckSquare className="h-4 w-4 text-purple-500" />
+                <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500 flex-shrink-0" />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {completedEquipment}/{totalEquipment}
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
@@ -319,7 +325,7 @@ export default function PowerliftingDashboard() {
         {/* Lift Cards */}
         <motion.div
           variants={itemVariants}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
         >
           <LiftCard
             lift="squat"
@@ -342,18 +348,18 @@ export default function PowerliftingDashboard() {
         </motion.div>
 
         {/* Progress Summary */}
-        <motion.div variants={itemVariants} className="mb-6">
+        <motion.div variants={itemVariants} className="mb-4 md:mb-6">
           <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Target className="h-5 w-5 text-blue-500" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                 Competition Readiness
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white mb-1">
+                  <div className="text-xl sm:text-2xl font-bold text-white mb-1">
                     {Math.round(
                       ((state.currentStats.squatMax +
                         state.currentStats.benchMax +
@@ -365,22 +371,28 @@ export default function PowerliftingDashboard() {
                     )}
                     %
                   </div>
-                  <p className="text-sm text-gray-400">Goal Progress</p>
+                  <p className="text-xs sm:text-sm text-gray-400">
+                    Goal Progress
+                  </p>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white mb-1">
+                  <div className="text-xl sm:text-2xl font-bold text-white mb-1">
                     {Math.round(equipmentProgress)}%
                   </div>
-                  <p className="text-sm text-gray-400">Equipment Ready</p>
+                  <p className="text-xs sm:text-sm text-gray-400">
+                    Equipment Ready
+                  </p>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white mb-1">
+                  <div className="text-xl sm:text-2xl font-bold text-white mb-1">
                     {state.currentStats.weight <=
                     state.meetInfo.targetWeightClass
                       ? "✓"
                       : "⚠"}
                   </div>
-                  <p className="text-sm text-gray-400">Weight Target</p>
+                  <p className="text-xs sm:text-sm text-gray-400">
+                    Weight Target
+                  </p>
                 </div>
               </div>
             </CardContent>

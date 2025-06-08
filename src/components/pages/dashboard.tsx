@@ -49,8 +49,10 @@ const Dashboard = () => {
       <div className="min-h-screen bg-gray-900">
         <TopNavigation onSettingsClick={() => setActiveView("settings")} />
 
-        <div className="flex pt-16">
-          <Sidebar activeItem={activeView} onItemClick={handleItemClick} />
+        <div className="flex pt-16 h-screen">
+          <div className="w-16 sm:w-auto flex-shrink-0">
+            <Sidebar activeItem={activeView} onItemClick={handleItemClick} />
+          </div>
 
           <main className="flex-1 overflow-auto">{renderContent()}</main>
         </div>
