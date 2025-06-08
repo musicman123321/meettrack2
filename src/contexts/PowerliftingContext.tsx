@@ -159,7 +159,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   // Debug logging function
-  const debugLog = (message: string, data?: any) => {
+  const debugLog = (message: string, data?: any, p0?: string) => {
     console.log(`[PowerliftingContext] ${message}`, data || "");
   };
 
