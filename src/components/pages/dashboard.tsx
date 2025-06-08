@@ -16,7 +16,7 @@ const Dashboard = () => {
   const [helpFormOpen, setHelpFormOpen] = useState(false);
 
   const handleItemClick = (key: string) => {
-    if (key === "help") {
+    if (key === "help" || key === "support") {
       setHelpFormOpen(true);
     } else {
       setActiveView(key);

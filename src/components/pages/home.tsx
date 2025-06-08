@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "../../../supabase/auth";
 import { supabase } from "../../../supabase/supabase";
 import { toast } from "@/components/ui/use-toast";
+import { analytics } from "@/utils/analytics";
 
 // Support Donation Component
 function SupportDonation() {
@@ -40,6 +41,9 @@ function SupportDonation() {
   const donationAmounts = [5, 10, 25, 50];
 
   const handleDonation = async (amount: number) => {
+    // Track donation click
+    analytics.trackDonationClick(amount);
+
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke(
@@ -47,7 +51,7 @@ function SupportDonation() {
         {
           body: {
             productPriceId: "donation", // This would need to be configured in Polar.sh
-            successUrl: `${window.location.origin}/success?type=donation`,
+            successUrl: `${window.location.origin}/success?type=donation&amount=${amount}`,
             customerEmail: user?.email || "anonymous@example.com",
             metadata: {
               type: "donation",
@@ -69,9 +73,11 @@ function SupportDonation() {
       }
     } catch (error: any) {
       console.error("Donation error:", error);
+      analytics.trackError("donation_failed", error.message);
       toast({
         title: "Unable to process donation",
-        description: "Please try again later or contact support.",
+        description:
+          "Please try again later or contact support at meettrackdev@gmail.com",
         variant: "destructive",
       });
     } finally {
@@ -326,6 +332,19 @@ export default function Home() {
           </div>
         </div>
       </header>
+      {/* Beta Notice */}
+      <section className="bg-orange-50 border-b border-orange-200 py-3">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center gap-2 text-center">
+            <span className="text-orange-600 font-medium text-sm">
+              🚧 This app is in beta. It's free to use for now, but if you'd
+              like to support continued development, please consider donating.
+              Send bug reports or ideas to meettrackdev@gmail.com.
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* Hero Section */}
       <section className="py-12 sm:py-20 px-4">
         <div className="container mx-auto text-center">
@@ -523,21 +542,33 @@ export default function Home() {
               </span>
             </div>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-gray-600 text-sm sm:text-base">
-              <a href="#" className="hover:text-gray-900 transition-colors">
-                Privacy
-              </a>
-              <a href="#" className="hover:text-gray-900 transition-colors">
-                Terms
-              </a>
-              <a href="#" className="hover:text-gray-900 transition-colors">
+              <Link
+                to="/privacy"
+                className="hover:text-gray-900 transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                to="/terms"
+                className="hover:text-gray-900 transition-colors"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                to="/support"
+                className="hover:text-gray-900 transition-colors"
+              >
                 Support
-              </a>
+              </Link>
             </div>
           </div>
           <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200 text-center text-gray-600 text-sm sm:text-base">
             <p>
               &copy; 2024 Meet Prep Tracker. Built for powerlifters, by
               powerlifters.
+            </p>
+            <p className="mt-2 text-xs text-gray-500">
+              Beta version - Free to use during development phase
             </p>
           </div>
         </div>

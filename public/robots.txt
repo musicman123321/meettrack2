@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://keen-tharp3-9pdfc.view-3.tempo-dev.app/sitemap.xml

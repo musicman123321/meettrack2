@@ -156,6 +156,12 @@ const TopNavigation = ({
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>
+            <Link to="/support">
+              <DropdownMenuItem className="py-2 text-gray-300 hover:text-white hover:bg-gray-700">
+                <User className="mr-2 h-4 w-4" />
+                Support
+              </DropdownMenuItem>
+            </Link>
             <DropdownMenuSeparator className="bg-gray-700" />
             <DropdownMenuItem
               onSelect={() => signOut()}

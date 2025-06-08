@@ -36,7 +36,7 @@ const navItems: NavItem[] = [
 
 const bottomItems: NavItem[] = [
   { icon: <Settings size={18} />, label: "Settings", key: "settings" },
-  { icon: <HelpCircle size={18} />, label: "Help", key: "help" },
+  { icon: <HelpCircle size={18} />, label: "Support", key: "support" },
 ];
 
 const Sidebar = ({
