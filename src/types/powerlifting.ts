@@ -106,6 +106,17 @@ export interface TrainingAnalytics {
   }[];
 }
 
+export interface ReadinessScore {
+  total: number;
+  breakdown: {
+    squatProgress: number;
+    benchProgress: number;
+    deadliftProgress: number;
+    weightManagement: number;
+    equipmentCompletion: number;
+  };
+}
+
 export const DEFAULT_EQUIPMENT: EquipmentItem[] = [
   {
     id: "1",

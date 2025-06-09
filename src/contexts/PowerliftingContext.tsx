@@ -17,6 +17,7 @@ import {
   TrainingEntry,
   TrainingFormData,
   TrainingAnalytics,
+  ReadinessScore,
   DEFAULT_EQUIPMENT,
 } from "../types/powerlifting";
 import { supabase } from "../../supabase/supabase";
@@ -146,6 +147,7 @@ interface PowerliftingContextType {
   addTrainingEntry: (entry: TrainingFormData) => Promise<void>;
   getTrainingHistory: (days?: number) => Promise<TrainingEntry[]>;
   getTrainingAnalytics: (days?: number) => Promise<TrainingAnalytics>;
+  calculateReadinessScore: () => ReadinessScore;
 }
 
 const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
@@ -972,6 +974,78 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Calculate Competition Readiness Score
+  const calculateReadinessScore = (): ReadinessScore => {
+    const { currentStats, meetGoals, equipmentChecklist, meetInfo } = state;
+
+    // Lift Progress (70% total - 23.3% each)
+    const calculateLiftProgress = (
+      lift: "squat" | "bench" | "deadlift",
+    ): number => {
+      const currentMax = currentStats[
+        `${lift}Max` as keyof CurrentStats
+      ] as number;
+      const goalThird = meetGoals[lift].third;
+      const confidence = meetGoals[lift].confidence;
+
+      if (goalThird === 0) return 0;
+
+      const progressRatio = Math.min(currentMax / goalThird, 1.2); // Cap at 120%
+      const confidenceRatio = confidence / 10;
+
+      return progressRatio * confidenceRatio * 23.3;
+    };
+
+    const squatProgress = calculateLiftProgress("squat");
+    const benchProgress = calculateLiftProgress("bench");
+    const deadliftProgress = calculateLiftProgress("deadlift");
+
+    // Weight Management (20%)
+    const weightDifference = Math.abs(
+      currentStats.weight - meetInfo.targetWeightClass,
+    );
+    let weightScore = 20;
+
+    if (weightDifference <= 2) {
+      weightScore = 20; // 100% if within 2kg
+    } else {
+      // Linear decrease: lose 2% per kg over 2kg difference
+      const excessWeight = weightDifference - 2;
+      weightScore = Math.max(0, 20 - excessWeight * 2);
+    }
+
+    // Equipment Checklist (10%)
+    const completedItems = equipmentChecklist.filter(
+      (item) => item.checked,
+    ).length;
+    const totalItems = equipmentChecklist.length;
+    const equipmentScore =
+      totalItems > 0 ? (completedItems / totalItems) * 10 : 0;
+
+    const totalScore = Math.min(
+      100,
+      Math.max(
+        0,
+        squatProgress +
+          benchProgress +
+          deadliftProgress +
+          weightScore +
+          equipmentScore,
+      ),
+    );
+
+    return {
+      total: Math.round(totalScore * 100) / 100,
+      breakdown: {
+        squatProgress: Math.round(squatProgress * 100) / 100,
+        benchProgress: Math.round(benchProgress * 100) / 100,
+        deadliftProgress: Math.round(deadliftProgress * 100) / 100,
+        weightManagement: Math.round(weightScore * 100) / 100,
+        equipmentCompletion: Math.round(equipmentScore * 100) / 100,
+      },
+    };
+  };
+
   // Refresh all data
   const refreshData = async () => {
     await fetchUserData();
@@ -1002,6 +1076,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         addTrainingEntry,
         getTrainingHistory,
         getTrainingAnalytics,
+        calculateReadinessScore,
       }}
     >
       {children}

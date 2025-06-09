@@ -29,6 +29,7 @@ import {
 import { usePowerlifting } from "../../contexts/PowerliftingContext";
 import LiftCard from "./LiftCard";
 import AnimatedProgressBar from "./AnimatedProgressBar";
+import ReadinessScoreWidget from "./ReadinessScoreWidget";
 import { toast } from "@/components/ui/use-toast";
 
 export default function PowerliftingDashboard() {
@@ -320,6 +321,13 @@ export default function PowerliftingDashboard() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* Readiness Score Widget */}
+        <motion.div variants={itemVariants} className="mb-6 md:mb-8">
+          <div className="max-w-sm mx-auto">
+            <ReadinessScoreWidget />
+          </div>
         </motion.div>
 
         {/* Lift Cards */}
