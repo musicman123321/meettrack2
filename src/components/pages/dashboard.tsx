@@ -26,7 +26,7 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
-        return <PowerliftingDashboard />;
+        return <PowerliftingDashboard onNavigate={setActiveView} />;
       case "lifts":
         return <LiftTracker />;
       case "training":
@@ -40,7 +40,7 @@ const Dashboard = () => {
       case "settings":
         return <SettingsPage onBack={() => setActiveView("dashboard")} />;
       default:
-        return <PowerliftingDashboard />;
+        return <PowerliftingDashboard onNavigate={setActiveView} />;
     }
   };
 

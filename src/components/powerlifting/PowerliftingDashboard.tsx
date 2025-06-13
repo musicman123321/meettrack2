@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Calendar,
   Target,
@@ -25,13 +26,20 @@ import {
   Plus,
   Settings,
   Edit,
+  CalendarDays,
 } from "lucide-react";
 import { usePowerlifting } from "../../contexts/PowerliftingContext";
 import LiftCard from "./LiftCard";
 import AnimatedProgressBar from "./AnimatedProgressBar";
 import { toast } from "@/components/ui/use-toast";
 
-export default function PowerliftingDashboard() {
+interface PowerliftingDashboardProps {
+  onNavigate?: (section: string) => void;
+}
+
+export default function PowerliftingDashboard({
+  onNavigate,
+}: PowerliftingDashboardProps) {
   const {
     state,
     loading,
@@ -40,12 +48,26 @@ export default function PowerliftingDashboard() {
     calculateWilks,
     addWeightEntry,
     saveCurrentStats,
+    saveMeetInfo,
     formatWeight,
   } = usePowerlifting();
 
   const [quickWeightOpen, setQuickWeightOpen] = useState(false);
   const [quickWeight, setQuickWeight] = useState("");
   const [saving, setSaving] = useState(false);
+  const [meetDialogOpen, setMeetDialogOpen] = useState(false);
+  const [meetForm, setMeetForm] = useState({
+    meetName: state.meetInfo.meetName || "",
+    meetDate: state.meetInfo.meetDate.toISOString().split("T")[0],
+    location: state.meetInfo.location || "",
+    targetWeightClass: state.meetInfo.targetWeightClass.toString(),
+  });
+  const [liftEditOpen, setLiftEditOpen] = useState(false);
+  const [liftEditForm, setLiftEditForm] = useState({
+    squatMax: state.currentStats.squatMax.toString(),
+    benchMax: state.currentStats.benchMax.toString(),
+    deadliftMax: state.currentStats.deadliftMax.toString(),
+  });
 
   if (loading) {
     return (
@@ -90,6 +112,38 @@ export default function PowerliftingDashboard() {
   const totalEquipment = state.equipmentChecklist.length;
   const equipmentProgress = (completedEquipment / totalEquipment) * 100;
 
+  // Calculate competition readiness with new weighting formula
+  const calculateCompetitionReadiness = () => {
+    // 80% - Progress toward lift goals
+    const goalTotal =
+      state.meetGoals.squat.third +
+      state.meetGoals.bench.third +
+      state.meetGoals.deadlift.third;
+    const liftProgress =
+      goalTotal > 0 ? Math.min(100, (totalLifts / goalTotal) * 100) : 0;
+
+    // 15% - Progress toward bodyweight goal
+    const weightProgress =
+      state.currentStats.weight <= state.meetInfo.targetWeightClass
+        ? 100
+        : Math.max(
+            0,
+            100 -
+              ((state.currentStats.weight - state.meetInfo.targetWeightClass) /
+                state.meetInfo.targetWeightClass) *
+                100,
+          );
+
+    // 5% - Equipment preparation
+    const equipmentReadiness = equipmentProgress;
+
+    return Math.round(
+      liftProgress * 0.8 + weightProgress * 0.15 + equipmentReadiness * 0.05,
+    );
+  };
+
+  const competitionReadiness = calculateCompetitionReadiness();
+
   // Handle quick weight logging
   const handleQuickWeightLog = async () => {
     if (!quickWeight || parseFloat(quickWeight) <= 0) {
@@ -126,6 +180,60 @@ export default function PowerliftingDashboard() {
     } catch (error) {
       toast({
         title: "Error logging weight",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle meet info update
+  const handleMeetInfoUpdate = async () => {
+    setSaving(true);
+    try {
+      await saveMeetInfo({
+        meetName: meetForm.meetName,
+        meetDate: new Date(meetForm.meetDate),
+        location: meetForm.location,
+        targetWeightClass: parseFloat(meetForm.targetWeightClass),
+      });
+
+      setMeetDialogOpen(false);
+      toast({
+        title: "Meet info updated!",
+        description: "Your competition details have been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating meet info",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle lift stats update
+  const handleLiftStatsUpdate = async () => {
+    setSaving(true);
+    try {
+      await saveCurrentStats({
+        ...state.currentStats,
+        squatMax: parseFloat(liftEditForm.squatMax),
+        benchMax: parseFloat(liftEditForm.benchMax),
+        deadliftMax: parseFloat(liftEditForm.deadliftMax),
+      });
+
+      setLiftEditOpen(false);
+      toast({
+        title: "Lift stats updated!",
+        description: "Your current maxes have been saved.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating lift stats",
         description: "Please try again.",
         variant: "destructive",
       });
@@ -232,44 +340,244 @@ export default function PowerliftingDashboard() {
           variants={itemVariants}
           className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 md:mb-8"
         >
-          <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
-            <CardHeader className="pb-2 p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
-                  Days Until Meet
-                </CardTitle>
-                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-red-500 flex-shrink-0" />
+          <Dialog open={meetDialogOpen} onOpenChange={setMeetDialogOpen}>
+            <DialogTrigger asChild>
+              <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target">
+                <CardHeader className="pb-2 p-3 sm:p-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
+                      Days Until Meet
+                    </CardTitle>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Edit className="h-3 w-3 text-gray-500" />
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <div className="text-xl sm:text-2xl font-bold text-white">
+                    {daysUntilMeet}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 truncate">
+                    {state.meetInfo.meetName || "Competition"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1 hidden sm:block">
+                    {new Date(state.meetInfo.meetDate).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-blue-400 mt-1 hidden sm:block">
+                    Click to edit meet details
+                  </p>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="bg-gray-800 border-gray-700 text-white">
+              <DialogHeader>
+                <DialogTitle>Edit Meet Details</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Update your competition information.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="meetName" className="text-gray-300">
+                    Meet Name
+                  </Label>
+                  <Input
+                    id="meetName"
+                    value={meetForm.meetName}
+                    onChange={(e) =>
+                      setMeetForm((prev) => ({
+                        ...prev,
+                        meetName: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter meet name"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="meetDate" className="text-gray-300">
+                    Meet Date
+                  </Label>
+                  <Input
+                    id="meetDate"
+                    type="date"
+                    value={meetForm.meetDate}
+                    onChange={(e) =>
+                      setMeetForm((prev) => ({
+                        ...prev,
+                        meetDate: e.target.value,
+                      }))
+                    }
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="location" className="text-gray-300">
+                    Location
+                  </Label>
+                  <Input
+                    id="location"
+                    value={meetForm.location}
+                    onChange={(e) =>
+                      setMeetForm((prev) => ({
+                        ...prev,
+                        location: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter location"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="targetWeightClass" className="text-gray-300">
+                    Target Weight Class (kg)
+                  </Label>
+                  <Input
+                    id="targetWeightClass"
+                    type="number"
+                    value={meetForm.targetWeightClass}
+                    onChange={(e) =>
+                      setMeetForm((prev) => ({
+                        ...prev,
+                        targetWeightClass: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter target weight class"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                  />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
-              <div className="text-xl sm:text-2xl font-bold text-white">
-                {daysUntilMeet}
-              </div>
-              <p className="text-xs text-gray-500 mt-1 truncate">
-                {state.meetInfo.meetName || "Competition"}
-              </p>
-              <p className="text-xs text-gray-400 mt-1 hidden sm:block">
-                {new Date(state.meetInfo.meetDate).toLocaleDateString()}
-              </p>
-            </CardContent>
-          </Card>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setMeetDialogOpen(false)}
+                  className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleMeetInfoUpdate}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader className="pb-2 p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
-                  Current Total
-                </CardTitle>
-                <Dumbbell className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
+          <Dialog open={liftEditOpen} onOpenChange={setLiftEditOpen}>
+            <DialogTrigger asChild>
+              <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target">
+                <CardHeader className="pb-2 p-3 sm:p-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
+                      Current Total
+                    </CardTitle>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Edit className="h-3 w-3 text-gray-500" />
+                      <Dumbbell className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <div className="text-xl sm:text-2xl font-bold text-white">
+                    {formatWeight(totalLifts)}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Wilks: {wilksScore}
+                  </p>
+                  <p className="text-xs text-blue-400 mt-1 hidden sm:block">
+                    Click to edit lifts
+                  </p>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="bg-gray-800 border-gray-700 text-white">
+              <DialogHeader>
+                <DialogTitle>Edit Current Maxes</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Update your current one-rep max for each lift.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="squatMax" className="text-gray-300">
+                    Squat Max (kg)
+                  </Label>
+                  <Input
+                    id="squatMax"
+                    type="number"
+                    value={liftEditForm.squatMax}
+                    onChange={(e) =>
+                      setLiftEditForm((prev) => ({
+                        ...prev,
+                        squatMax: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter squat max"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                    step="0.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="benchMax" className="text-gray-300">
+                    Bench Max (kg)
+                  </Label>
+                  <Input
+                    id="benchMax"
+                    type="number"
+                    value={liftEditForm.benchMax}
+                    onChange={(e) =>
+                      setLiftEditForm((prev) => ({
+                        ...prev,
+                        benchMax: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter bench max"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                    step="0.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="deadliftMax" className="text-gray-300">
+                    Deadlift Max (kg)
+                  </Label>
+                  <Input
+                    id="deadliftMax"
+                    type="number"
+                    value={liftEditForm.deadliftMax}
+                    onChange={(e) =>
+                      setLiftEditForm((prev) => ({
+                        ...prev,
+                        deadliftMax: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter deadlift max"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                    step="0.5"
+                  />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
-              <div className="text-xl sm:text-2xl font-bold text-white">
-                {formatWeight(totalLifts)}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Wilks: {wilksScore}</p>
-            </CardContent>
-          </Card>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setLiftEditOpen(false)}
+                  className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleLiftStatsUpdate}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Card
             className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target"
@@ -299,7 +607,10 @@ export default function PowerliftingDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card
+            className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target"
+            onClick={() => onNavigate?.("equipment")}
+          >
             <CardHeader className="pb-2 p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
@@ -318,6 +629,9 @@ export default function PowerliftingDashboard() {
                   style={{ width: `${equipmentProgress}%` }}
                 />
               </div>
+              <p className="text-xs text-blue-400 mt-1 hidden sm:block">
+                Click to view checklist
+              </p>
             </CardContent>
           </Card>
         </motion.div>
@@ -347,7 +661,7 @@ export default function PowerliftingDashboard() {
           />
         </motion.div>
 
-        {/* Progress Summary */}
+        {/* Competition Readiness */}
         <motion.div variants={itemVariants} className="mb-4 md:mb-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="p-4 sm:p-6">
@@ -357,42 +671,102 @@ export default function PowerliftingDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-6">
+                {/* Overall Readiness */}
                 <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-white mb-1">
-                    {Math.round(
-                      ((state.currentStats.squatMax +
-                        state.currentStats.benchMax +
-                        state.currentStats.deadliftMax) /
-                        (state.meetGoals.squat.third +
-                          state.meetGoals.bench.third +
-                          state.meetGoals.deadlift.third)) *
-                        100,
-                    )}
-                    %
+                  <div className="text-4xl font-bold text-white mb-2">
+                    {competitionReadiness}%
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-400">
-                    Goal Progress
+                  <Progress value={competitionReadiness} className="h-4 mb-4" />
+                  <p className="text-sm text-gray-400">
+                    Overall Competition Readiness
                   </p>
                 </div>
-                <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-white mb-1">
-                    {Math.round(equipmentProgress)}%
+
+                {/* Breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-gray-700/50 p-4 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400 mb-1">
+                        {Math.round(
+                          ((state.currentStats.squatMax +
+                            state.currentStats.benchMax +
+                            state.currentStats.deadliftMax) /
+                            (state.meetGoals.squat.third +
+                              state.meetGoals.bench.third +
+                              state.meetGoals.deadlift.third)) *
+                            100,
+                        )}
+                        %
+                      </div>
+                      <Progress
+                        value={Math.round(
+                          ((state.currentStats.squatMax +
+                            state.currentStats.benchMax +
+                            state.currentStats.deadliftMax) /
+                            (state.meetGoals.squat.third +
+                              state.meetGoals.bench.third +
+                              state.meetGoals.deadlift.third)) *
+                            100,
+                        )}
+                        className="h-2 my-2"
+                      />
+                      <p className="text-xs text-gray-400">Lift Goals (80%)</p>
+                    </div>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-400">
-                    Equipment Ready
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-white mb-1">
-                    {state.currentStats.weight <=
-                    state.meetInfo.targetWeightClass
-                      ? "✓"
-                      : "⚠"}
+
+                  <div className="bg-gray-700/50 p-4 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400 mb-1">
+                        {state.currentStats.weight <=
+                        state.meetInfo.targetWeightClass
+                          ? 100
+                          : Math.max(
+                              0,
+                              Math.round(
+                                100 -
+                                  ((state.currentStats.weight -
+                                    state.meetInfo.targetWeightClass) /
+                                    state.meetInfo.targetWeightClass) *
+                                    100,
+                              ),
+                            )}
+                        %
+                      </div>
+                      <Progress
+                        value={
+                          state.currentStats.weight <=
+                          state.meetInfo.targetWeightClass
+                            ? 100
+                            : Math.max(
+                                0,
+                                100 -
+                                  ((state.currentStats.weight -
+                                    state.meetInfo.targetWeightClass) /
+                                    state.meetInfo.targetWeightClass) *
+                                    100,
+                              )
+                        }
+                        className="h-2 my-2"
+                      />
+                      <p className="text-xs text-gray-400">
+                        Weight Target (15%)
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-400">
-                    Weight Target
-                  </p>
+
+                  <div className="bg-gray-700/50 p-4 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-400 mb-1">
+                        {Math.round(equipmentProgress)}%
+                      </div>
+                      <Progress
+                        value={equipmentProgress}
+                        className="h-2 my-2"
+                      />
+                      <p className="text-xs text-gray-400">Equipment (5%)</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
