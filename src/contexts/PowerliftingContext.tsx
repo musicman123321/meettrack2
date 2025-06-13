@@ -169,31 +169,13 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     setError(message);
   };
 
-  // Fetch user data from Supabase with retry logic
+  // Fetch user data from Supabase
   const fetchUserData = async () => {
     if (!user?.id) {
       debugLog("No user found, skipping data fetch");
       setLoading(false);
       return;
     }
-
-    const retryOperation = async (
-      operation: () => Promise<any>,
-      maxRetries = 3,
-    ) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          return await operation();
-        } catch (error: any) {
-          if (attempt === maxRetries) throw error;
-          debugLog(
-            `Retry attempt ${attempt} failed, retrying...`,
-            error.message,
-          );
-          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-        }
-      }
-    };
 
     try {
       setLoading(true);
@@ -236,40 +218,19 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Fetch current stats with retry
+      // Fetch current stats
       debugLog("Fetching current stats...");
-      const currentStatsData = await retryOperation(async () => {
-        const { data, error } = await supabase
-          .from("current_stats")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
+      const { data: currentStatsData, error: statsError } = await supabase
+        .from("current_stats")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-        if (error) {
-          throw new Error(`Failed to fetch current stats: ${error.message}`);
-        }
-        return data;
-      });
+      if (statsError) {
+        errorLog("Error fetching current stats", statsError);
+        throw new Error(`Failed to fetch current stats: ${statsError.message}`);
+      }
       debugLog("Current stats fetched:", currentStatsData);
-
-      // Fetch user lifts for independent lift tracking
-      debugLog("Fetching user lifts...");
-      const userLiftsData = await retryOperation(async () => {
-        const { data, error } = await supabase
-          .from("user_lifts")
-          .select("*")
-          .eq("user_id", user.id);
-
-        if (error) {
-          debugLog(
-            "Warning: Failed to fetch user lifts (table may not exist yet):",
-            error.message,
-          );
-          return [];
-        }
-        return data || [];
-      });
-      debugLog("User lifts fetched:", userLiftsData);
 
       // Fetch active meet
       debugLog("Fetching active meet...");
@@ -344,29 +305,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         debugLog("Default equipment initialized:", newEquipmentData);
       }
 
-      // Transform and set data, prioritizing user_lifts for lift maxes
-      const transformedCurrentStats = currentStatsData
-        ? {
-            weight: currentStatsData.weight,
-            squatMax: currentStatsData.squat_max,
-            benchMax: currentStatsData.bench_max,
-            deadliftMax: currentStatsData.deadlift_max,
-          }
-        : initialState.currentStats;
-
-      // Override with user_lifts data if available (more recent/accurate)
-      if (userLiftsData && userLiftsData.length > 0) {
-        userLiftsData.forEach((lift: any) => {
-          if (lift.lift_type === "squat") {
-            transformedCurrentStats.squatMax = lift.max_weight;
-          } else if (lift.lift_type === "bench") {
-            transformedCurrentStats.benchMax = lift.max_weight;
-          } else if (lift.lift_type === "deadlift") {
-            transformedCurrentStats.deadliftMax = lift.max_weight;
-          }
-        });
-      }
-
+      // Transform and set data
       const newState: PowerliftingState = {
         meetInfo: meetData
           ? {
@@ -376,11 +315,15 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
               location: meetData.location || "",
             }
           : initialState.meetInfo,
-        currentStats: transformedCurrentStats,
-        meetGoals: transformMeetGoalsFromDB(
-          meetGoalsData || [],
-          userLiftsData || [],
-        ),
+        currentStats: currentStatsData
+          ? {
+              weight: currentStatsData.weight,
+              squatMax: currentStatsData.squat_max,
+              benchMax: currentStatsData.bench_max,
+              deadliftMax: currentStatsData.deadlift_max,
+            }
+          : initialState.currentStats,
+        meetGoals: transformMeetGoalsFromDB(meetGoalsData || []),
         equipmentChecklist:
           equipmentData?.length > 0
             ? transformEquipmentFromDB(equipmentData)
@@ -404,48 +347,53 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   };
 
   // Transform meet goals from database format, with fallback to user_lifts
-  const transformMeetGoalsFromDB = (
-    goalsData: any[],
-    userLiftsData: any[] = [],
-  ): MeetGoals => {
-    const goals: MeetGoals = {
-      squat: { opener: 125, second: 140, third: 150, confidence: 8 },
-      bench: { opener: 90, second: 100, third: 107.5, confidence: 7 },
-      deadlift: { opener: 162.5, second: 180, third: 190, confidence: 9 },
-    };
+  const transformMeetGoalsFromDB = (goalsData: any[], userLiftsData: any[] = []): MeetGoals => {
+  const goals: MeetGoals = {
+    squat: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+    bench: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+    deadlift: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+  };
 
+  try {
     // First, apply meet goals if available
-    goalsData.forEach((goal) => {
-      if (goal.lift_type in goals) {
-        goals[goal.lift_type as keyof MeetGoals] = {
-          opener: goal.opener,
-          second: goal.second,
-          third: goal.third,
-          confidence: goal.confidence,
-        };
-      }
-    });
+    if (goalsData && Array.isArray(goalsData)) {
+      goalsData.forEach((goal) => {
+        if (goal.lift_type in goals) {
+          goals[goal.lift_type as keyof MeetGoals] = {
+            opener: goal.opener,
+            second: goal.second,
+            third: goal.third,
+            confidence: goal.confidence,
+          };
+        }
+      });
+    }
 
     // Then, fallback to user_lifts data for confidence and max weights
-    userLiftsData.forEach((lift) => {
-      if (lift.lift_type in goals) {
-        const currentGoal = goals[lift.lift_type as keyof MeetGoals];
-        // Update confidence from user_lifts if available
-        if (lift.confidence) {
-          currentGoal.confidence = lift.confidence;
+    if (userLiftsData && Array.isArray(userLiftsData)) {
+      userLiftsData.forEach((lift) => {
+        if (lift.lift_type in goals) {
+          const currentGoal = goals[lift.lift_type as keyof MeetGoals];
+          // Update confidence from user_lifts if available
+          if (lift.confidence) {
+            currentGoal.confidence = lift.confidence;
+          }
+          // If no meet goals exist, generate reasonable attempts based on max weight
+          if ((!goalsData || goalsData.length === 0) && lift.max_weight > 0) {
+            const maxWeight = lift.max_weight;
+            currentGoal.opener = Math.round(maxWeight * 0.85 * 4) / 4; // 85% rounded to nearest 2.5
+            currentGoal.second = Math.round(maxWeight * 0.95 * 4) / 4; // 95% rounded to nearest 2.5
+            currentGoal.third = Math.round(maxWeight * 1.05 * 4) / 4; // 105% rounded to nearest 2.5
+          }
         }
-        // If no meet goals exist, generate reasonable attempts based on max weight
-        if (goalsData.length === 0 && lift.max_weight > 0) {
-          const maxWeight = lift.max_weight;
-          currentGoal.opener = Math.round(maxWeight * 0.85 * 4) / 4; // 85% rounded to nearest 2.5
-          currentGoal.second = Math.round(maxWeight * 0.95 * 4) / 4; // 95% rounded to nearest 2.5
-          currentGoal.third = Math.round(maxWeight * 1.05 * 4) / 4; // 105% rounded to nearest 2.5
-        }
-      }
-    });
+      });
+    }
+  } catch (err) {
+    errorLog("Error transforming meet goals from DB", err);
+  }
 
-    return goals;
-  };
+  return goals;
+};
 
   // Transform equipment from database format
   const transformEquipmentFromDB = (equipmentData: any[]): EquipmentItem[] => {
@@ -560,86 +508,49 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     return Math.min(100, (currentMax / goalThird) * 100);
   };
 
-  // Save current stats to Supabase with retry logic
+  // Save current stats to Supabase
   const saveCurrentStats = async (stats: CurrentStats) => {
     if (!user?.id) {
       errorLog("No user found when saving current stats", null);
       return;
     }
 
-    const retryOperation = async (
-      operation: () => Promise<any>,
-      maxRetries = 3,
-    ) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          return await operation();
-        } catch (error: any) {
-          if (attempt === maxRetries) throw error;
-          debugLog(
-            `Retry attempt ${attempt} failed, retrying...`,
-            error.message,
-          );
-          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-        }
-      }
-    };
-
     try {
       debugLog("Saving current stats:", stats);
 
-      await retryOperation(async () => {
-        // Use UPSERT to handle both insert and update cases
-        const { error } = await supabase.from("current_stats").upsert(
-          {
+      // First try to update existing record
+      const { error: updateError } = await supabase
+        .from("current_stats")
+        .update({
+          weight: stats.weight,
+          squat_max: stats.squatMax,
+          bench_max: stats.benchMax,
+          deadlift_max: stats.deadliftMax,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id);
+
+      // If no record exists, insert a new one
+      if (updateError?.code === "PGRST116") {
+        // No rows affected
+        const { error: insertError } = await supabase
+          .from("current_stats")
+          .insert({
             user_id: user.id,
             weight: stats.weight,
             squat_max: stats.squatMax,
             bench_max: stats.benchMax,
             deadlift_max: stats.deadliftMax,
+            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "user_id",
-          },
-        );
+          });
 
-        if (error) {
-          throw new Error(`Failed to save current stats: ${error.message}`);
-        }
-      });
+        if (insertError) throw insertError;
+      } else if (updateError) {
+        throw updateError;
+      }
 
-      // Also save lift maxes to user_lifts table for independent tracking
-      await retryOperation(async () => {
-        const lifts = [
-          { lift_type: "squat", max_weight: stats.squatMax },
-          { lift_type: "bench", max_weight: stats.benchMax },
-          { lift_type: "deadlift", max_weight: stats.deadliftMax },
-        ];
-
-        for (const lift of lifts) {
-          const { error } = await supabase.from("user_lifts").upsert(
-            {
-              user_id: user.id,
-              lift_type: lift.lift_type,
-              max_weight: lift.max_weight,
-              updated_at: new Date().toISOString(),
-            },
-            {
-              onConflict: "user_id,lift_type",
-            },
-          );
-
-          if (error) {
-            debugLog(
-              `Warning: Failed to save ${lift.lift_type} to user_lifts:`,
-              error.message,
-            );
-          }
-        }
-      });
-
-      debugLog("Successfully saved current stats and user lifts");
+      debugLog("Successfully saved current stats");
       dispatch({ type: "SET_CURRENT_STATS", payload: stats });
     } catch (err: any) {
       errorLog("Error saving current stats", err);
@@ -647,114 +558,53 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Save meet goals to Supabase with retry logic and fallback to user_lifts
+  // Save meet goals to Supabase
   const saveMeetGoals = async (goals: MeetGoals) => {
     if (!user?.id) {
       errorLog("No user found when saving meet goals", null);
       return;
     }
 
-    const retryOperation = async (
-      operation: () => Promise<any>,
-      maxRetries = 3,
-    ) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          return await operation();
-        } catch (error: any) {
-          if (attempt === maxRetries) throw error;
-          debugLog(
-            `Retry attempt ${attempt} failed, retrying...`,
-            error.message,
-          );
-          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-        }
-      }
-    };
-
     try {
       debugLog("Saving meet goals:", goals);
 
-      // Try to save to meet_goals if there's an active meet
-      let meetGoalsSaved = false;
-      try {
-        await retryOperation(async () => {
-          // Get active meet ID
-          const { data: meetData } = await supabase
-            .from("meets")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("is_active", true)
-            .single();
+      // Get active meet ID
+      const { data: meetData } = await supabase
+        .from("meets")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .single();
 
-          const meetId = meetData?.id;
-          if (!meetId) {
-            throw new Error("No active meet found");
-          }
-
-          // Prepare goals data for upsert
-          const goalsToUpsert = Object.entries(goals).map(
-            ([liftType, attempts]) => ({
-              user_id: user.id,
-              meet_id: meetId,
-              lift_type: liftType,
-              opener: attempts.opener,
-              second: attempts.second,
-              third: attempts.third,
-              confidence: attempts.confidence,
-            }),
-          );
-
-          const { error } = await supabase
-            .from("meet_goals")
-            .upsert(goalsToUpsert, {
-              onConflict: "user_id,meet_id,lift_type",
-            });
-
-          if (error) {
-            throw new Error(`Failed to save meet goals: ${error.message}`);
-          }
-
-          meetGoalsSaved = true;
-        });
-      } catch (meetError: any) {
-        debugLog(
-          "No active meet found, will save to user_lifts instead",
-          meetError.message,
-        );
+      const meetId = meetData?.id;
+      if (!meetId) {
+        throw new Error("No active meet found");
       }
 
-      // Always save max lifts and confidence to user_lifts for independent tracking
-      await retryOperation(async () => {
-        const liftsToUpsert = Object.entries(goals).map(
-          ([liftType, attempts]) => ({
-            user_id: user.id,
-            lift_type: liftType,
-            max_weight: attempts.third, // Use third attempt as max
-            confidence: attempts.confidence,
-            updated_at: new Date().toISOString(),
-          }),
-        );
-
-        for (const lift of liftsToUpsert) {
-          const { error } = await supabase.from("user_lifts").upsert(lift, {
-            onConflict: "user_id,lift_type",
-          });
-
-          if (error) {
-            debugLog(
-              `Warning: Failed to save ${lift.lift_type} to user_lifts:`,
-              error.message,
-            );
-          }
-        }
-      });
-
-      debugLog(
-        meetGoalsSaved
-          ? "Successfully saved meet goals and user lifts"
-          : "Successfully saved user lifts (no active meet)",
+      // Prepare goals data for upsert
+      const goalsToUpsert = Object.entries(goals).map(
+        ([liftType, attempts]) => ({
+          user_id: user.id,
+          meet_id: meetId,
+          lift_type: liftType,
+          opener: attempts.opener,
+          second: attempts.second,
+          third: attempts.third,
+          confidence: attempts.confidence,
+        }),
       );
+
+      const { error } = await supabase
+        .from("meet_goals")
+        .upsert(goalsToUpsert, {
+          onConflict: "user_id,meet_id,lift_type",
+        });
+
+      if (error) {
+        throw new Error(`Failed to save meet goals: ${error.message}`);
+      }
+
+      debugLog("Successfully saved meet goals");
       dispatch({ type: "SET_MEET_GOALS", payload: goals });
     } catch (err: any) {
       errorLog("Error saving meet goals", err);
@@ -791,68 +641,60 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Add weight entry to Supabase with retry logic and current stats update
+  // Add weight entry to Supabase
   const addWeightEntry = async (entry: WeightEntry) => {
-    if (!user?.id) {
-      errorLog("No user found when adding weight entry", null);
-      return;
+  if (!user?.id) {
+    errorLog("No user found when adding weight entry", null);
+    return;
+  }
+
+  try {
+    debugLog("Adding weight entry:", entry);
+    
+    // First check if an entry already exists for this date
+    const { data: existingEntry, error: fetchError } = await supabase
+      .from("weight_history")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("date", entry.date)
+      .maybeSingle();
+
+    if (fetchError) {
+      throw new Error(`Failed to check for existing weight entry: ${fetchError.message}`);
     }
 
-    const retryOperation = async (
-      operation: () => Promise<any>,
-      maxRetries = 3,
-    ) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          return await operation();
-        } catch (error: any) {
-          if (attempt === maxRetries) throw error;
-          debugLog(
-            `Retry attempt ${attempt} failed, retrying...`,
-            error.message,
-          );
-          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-        }
+    if (existingEntry) {
+      // Update existing entry
+      const { error: updateError } = await supabase
+        .from("weight_history")
+        .update({ weight: entry.weight })
+        .eq("id", existingEntry.id);
+
+      if (updateError) {
+        throw new Error(`Failed to update weight entry: ${updateError.message}`);
       }
-    };
-
-    try {
-      debugLog("Adding weight entry:", entry);
-
-      await retryOperation(async () => {
-        // Use UPSERT to handle duplicate date entries
-        const { error } = await supabase.from("weight_history").upsert(
-          {
-            user_id: user.id,
-            weight: entry.weight,
-            date: entry.date,
-          },
-          {
-            onConflict: "user_id,date",
-          },
-        );
-
-        if (error) {
-          throw new Error(`Failed to add weight entry: ${error.message}`);
-        }
-      });
-
-      // Update current stats weight as well
-      await retryOperation(async () => {
-        const updatedStats = {
-          ...state.currentStats,
+    } else {
+      // Insert new entry
+      const { error: insertError } = await supabase
+        .from("weight_history")
+        .insert({
+          user_id: user.id,
           weight: entry.weight,
-        };
-        await saveCurrentStats(updatedStats);
-      });
+          date: entry.date,
+        });
 
-      debugLog("Successfully added weight entry and updated current stats");
-      dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
-    } catch (err: any) {
-      errorLog("Error adding weight entry", err);
-      throw err;
+      if (insertError) {
+        throw new Error(`Failed to add weight entry: ${insertError.message}`);
+      }
     }
-  };
+
+    debugLog("Successfully added/updated weight entry");
+    dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
+  } catch (err: any) {
+    errorLog("Error adding weight entry", err);
+    throw err;
+  }
+};
 
   // Toggle equipment item in Supabase
   const toggleEquipmentItem = async (itemId: string) => {
@@ -1034,7 +876,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      debugLog("Fetching training history for last", days, "days");
+      debugLog("Fetching training history for last", days);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
@@ -1058,133 +900,153 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   };
 
   // Get training analytics from Supabase
-  const getTrainingAnalytics = async (
-    days: number = 90,
-  ): Promise<TrainingAnalytics> => {
-    if (!user?.id) {
-      errorLog("No user found when fetching training analytics", null);
-      return {
-        volumeProgression: [],
-        estimatedMaxProgression: [],
-        weeklyVolume: [],
-      };
+  // Update the getTrainingAnalytics function with proper types
+// First, let's define some helper types to make the code cleaner
+type LiftVolumes = {
+  squat: number;
+  bench: number;
+  deadlift: number;
+};
+
+type LiftVolumesWithTotal = LiftVolumes & {
+  total: number;
+};
+
+type DatedLiftVolumes = LiftVolumes & {
+  date: string;
+};
+
+type WeeklyLiftVolumes = LiftVolumesWithTotal & {
+  week: string;
+};
+
+// Now update the getTrainingAnalytics function
+const getTrainingAnalytics = async (
+  days: number = 90,
+): Promise<TrainingAnalytics> => {
+  if (!user?.id) {
+    errorLog("No user found when fetching training analytics", null);
+    return {
+      volumeProgression: [],
+      estimatedMaxProgression: [],
+      weeklyVolume: [],
+    };
+  }
+
+  try {
+    debugLog(`Fetching training analytics for last ${days} days`);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const { data, error } = await supabase
+      .from("training_history")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("training_date", startDate.toISOString().split("T")[0])
+      .order("training_date", { ascending: true });
+
+    if (error) {
+      throw new Error(`Failed to fetch training analytics: ${error.message}`);
     }
 
-    try {
-      debugLog("Fetching training analytics for last", days, "days");
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
+    debugLog("Successfully fetched training analytics data", data);
 
-      const { data, error } = await supabase
-        .from("training_history")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("training_date", startDate.toISOString().split("T")[0])
-        .order("training_date", { ascending: true });
+    // Process data for analytics
+    const entries = data || [];
+    const analytics: TrainingAnalytics = {
+      volumeProgression: [],
+      estimatedMaxProgression: [],
+      weeklyVolume: [],
+    };
 
-      if (error) {
-        throw new Error(`Failed to fetch training analytics: ${error.message}`);
-      }
+    // Group by date for volume and 1RM progression
+    const dateGroups = entries.reduce<Record<string, LiftVolumes>>(
+      (acc, entry) => {
+        const date = entry.training_date;
+        const liftType = entry.lift_type as keyof LiftVolumes;
+        
+        if (!acc[date]) {
+          acc[date] = { squat: 0, bench: 0, deadlift: 0 };
+        }
+        
+        acc[date][liftType] += entry.volume || 0;
+        return acc;
+      },
+      {}
+    );
 
-      debugLog("Successfully fetched training analytics data:", data);
+    // Volume progression
+    analytics.volumeProgression = Object.entries(dateGroups).map<DatedLiftVolumes>(
+      ([date, volumes]) => ({
+        date,
+        ...volumes
+      })
+    );
 
-      // Process data for analytics
-      const entries = data || [];
-      const analytics: TrainingAnalytics = {
-        volumeProgression: [],
-        estimatedMaxProgression: [],
-        weeklyVolume: [],
-      };
+    // Estimated 1RM progression (take max per day per lift)
+    const maxGroups = entries.reduce<Record<string, LiftVolumes>>(
+      (acc, entry) => {
+        const date = entry.training_date;
+        const liftType = entry.lift_type as keyof LiftVolumes;
+        
+        if (!acc[date]) {
+          acc[date] = { squat: 0, bench: 0, deadlift: 0 };
+        }
+        
+        acc[date][liftType] = Math.max(
+          acc[date][liftType],
+          entry.estimated_1rm || 0,
+        );
+        return acc;
+      },
+      {}
+    );
 
-      // Group by date for volume and 1RM progression
-      const dateGroups = entries.reduce(
-        (acc, entry) => {
-          const date = entry.training_date;
-          if (!acc[date]) {
-            acc[date] = { squat: 0, bench: 0, deadlift: 0 };
-          }
-          acc[date][entry.lift_type] += entry.volume || 0;
-          return acc;
-        },
-        {} as Record<
-          string,
-          { squat: number; bench: number; deadlift: number }
-        >,
-      );
+    analytics.estimatedMaxProgression = Object.entries(maxGroups).map<DatedLiftVolumes>(
+      ([date, maxes]) => ({
+        date,
+        ...maxes
+      })
+    );
 
-      // Volume progression
-      analytics.volumeProgression = Object.entries(dateGroups).map(
-        ([date, volumes]) => ({
-          date,
-          ...volumes,
-        }),
-      );
+    // Weekly volume (group by week)
+    const weekGroups = entries.reduce<Record<string, LiftVolumesWithTotal>>(
+      (acc, entry) => {
+        const date = new Date(entry.training_date);
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        const weekKey = weekStart.toISOString().split("T")[0];
+        const liftType = entry.lift_type as keyof LiftVolumes;
 
-      // Estimated 1RM progression (take max per day per lift)
-      const maxGroups = entries.reduce(
-        (acc, entry) => {
-          const date = entry.training_date;
-          if (!acc[date]) {
-            acc[date] = { squat: 0, bench: 0, deadlift: 0 };
-          }
-          acc[date][entry.lift_type] = Math.max(
-            acc[date][entry.lift_type],
-            entry.estimated_1rm || 0,
-          );
-          return acc;
-        },
-        {} as Record<
-          string,
-          { squat: number; bench: number; deadlift: number }
-        >,
-      );
+        if (!acc[weekKey]) {
+          acc[weekKey] = { squat: 0, bench: 0, deadlift: 0, total: 0 };
+        }
+        
+        const volume = entry.volume || 0;
+        acc[weekKey][liftType] += volume;
+        acc[weekKey].total += volume;
+        return acc;
+      },
+      {}
+    );
 
-      analytics.estimatedMaxProgression = Object.entries(maxGroups).map(
-        ([date, maxes]) => ({
-          date,
-          ...maxes,
-        }),
-      );
+    analytics.weeklyVolume = Object.entries(weekGroups).map<WeeklyLiftVolumes>(
+      ([week, volumes]) => ({
+        week,
+        ...volumes
+      })
+    );
 
-      // Weekly volume (group by week)
-      const weekGroups = entries.reduce(
-        (acc, entry) => {
-          const date = new Date(entry.training_date);
-          const weekStart = new Date(date);
-          weekStart.setDate(date.getDate() - date.getDay());
-          const weekKey = weekStart.toISOString().split("T")[0];
-
-          if (!acc[weekKey]) {
-            acc[weekKey] = { squat: 0, bench: 0, deadlift: 0, total: 0 };
-          }
-          const volume = entry.volume || 0;
-          acc[weekKey][entry.lift_type] += volume;
-          acc[weekKey].total += volume;
-          return acc;
-        },
-        {} as Record<
-          string,
-          { squat: number; bench: number; deadlift: number; total: number }
-        >,
-      );
-
-      analytics.weeklyVolume = Object.entries(weekGroups).map(
-        ([week, volumes]) => ({
-          week,
-          ...volumes,
-        }),
-      );
-
-      return analytics;
-    } catch (err: any) {
-      errorLog("Error fetching training analytics", err);
-      return {
-        volumeProgression: [],
-        estimatedMaxProgression: [],
-        weeklyVolume: [],
-      };
-    }
-  };
+    return analytics;
+  } catch (err: any) {
+    errorLog("Error fetching training analytics", err);
+    return {
+      volumeProgression: [],
+      estimatedMaxProgression: [],
+      weeklyVolume: [],
+    };
+  }
+};
 
   // Refresh all data
   const refreshData = async () => {
