@@ -63,7 +63,10 @@ export default function PowerliftingDashboard({
   const [meetDialogOpen, setMeetDialogOpen] = useState(false);
   const [meetForm, setMeetForm] = useState({
     meetName: state.meetInfo.meetName || "",
-    meetDate: state.meetInfo.meetDate.toISOString().split("T")[0],
+    meetDate:
+      state.meetInfo.meetDate instanceof Date
+        ? state.meetInfo.meetDate.toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
     location: state.meetInfo.location || "",
     targetWeightClass: state.meetInfo.targetWeightClass.toString(),
   });
@@ -437,7 +440,9 @@ export default function PowerliftingDashboard({
                     {state.meetInfo.meetName || "Competition"}
                   </p>
                   <p className="text-xs text-gray-400 mt-1 hidden sm:block">
-                    {new Date(state.meetInfo.meetDate).toLocaleDateString()}
+                    {state.meetInfo.meetDate instanceof Date
+                      ? state.meetInfo.meetDate.toLocaleDateString()
+                      : new Date(state.meetInfo.meetDate).toLocaleDateString()}
                   </p>
                   <p className="text-xs text-blue-400 mt-1 hidden sm:block">
                     Click to edit meet details
@@ -537,116 +542,6 @@ export default function PowerliftingDashboard({
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   {saving ? "Saving..." : "Save Changes"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog
-            open={meetListOpen}
-            onOpenChange={(open) => {
-              setMeetListOpen(open);
-              if (open) loadMeetsList();
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-sm sm:text-base touch-target">
-                <List className="h-4 w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Manage Meets</span>
-                <span className="sm:hidden">Meets</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Manage Your Meets</DialogTitle>
-                <DialogDescription className="text-gray-400">
-                  Select your active meet or manage your competition list.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                {loadingMeets ? (
-                  <div className="text-center py-8">
-                    <div className="text-gray-400">Loading meets...</div>
-                  </div>
-                ) : meetsList.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="text-gray-400 mb-4">No meets found</div>
-                    <p className="text-sm text-gray-500">
-                      Create your first meet using the "Edit Meet Details"
-                      option above.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {meetsList.map((meet) => (
-                      <div
-                        key={meet.id}
-                        className={`p-4 rounded-lg border transition-colors ${
-                          meet.is_active
-                            ? "bg-blue-900/30 border-blue-500/50"
-                            : "bg-gray-700/50 border-gray-600 hover:border-gray-500"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-white">
-                                {meet.meet_name || "Unnamed Meet"}
-                              </h4>
-                              {meet.is_active && (
-                                <Badge className="bg-blue-600 text-white text-xs">
-                                  Active
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-400 space-y-1">
-                              <div>
-                                📅{" "}
-                                {new Date(meet.meet_date).toLocaleDateString()}
-                              </div>
-                              {meet.location && <div>📍 {meet.location}</div>}
-                              <div>⚖️ {meet.target_weight_class}kg class</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            {!meet.is_active && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMeetSelection(meet.id)}
-                                disabled={saving}
-                                className="bg-blue-600 hover:bg-blue-700 text-xs"
-                              >
-                                Select
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                handleMeetDeletion(
-                                  meet.id,
-                                  meet.meet_name || "Unnamed Meet",
-                                )
-                              }
-                              disabled={saving}
-                              className="bg-red-900/30 border-red-500/50 text-red-400 hover:bg-red-900/50 text-xs"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setMeetListOpen(false)}
-                  className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-                >
-                  Close
                 </Button>
               </DialogFooter>
             </DialogContent>
