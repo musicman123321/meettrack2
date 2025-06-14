@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -18,6 +18,8 @@ import {
   Target,
   Award,
   AlertCircle,
+  Calendar,
+  Activity,
 } from "lucide-react";
 import { usePowerlifting } from "@/contexts/PowerliftingContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,13 +29,151 @@ interface AnalyticsProps {
 }
 
 const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
-  const { state, loading, error, refreshData } = usePowerlifting();
+  const { state, loading, error, refreshData, getTrainingHistory } =
+    usePowerlifting();
   const { currentStats, meetGoals } = state;
+  const [trainingData, setTrainingData] = useState<any[]>([]);
+  const [prs, setPrs] = useState({
+    squat: { weight: 0, estimated1rm: 0, date: null },
+    bench: { weight: 0, estimated1rm: 0, date: null },
+    deadlift: { weight: 0, estimated1rm: 0, date: null },
+  });
+  const [frequency, setFrequency] = useState({
+    squat: 0,
+    bench: 0,
+    deadlift: 0,
+    total: 0,
+  });
+  const [intensity, setIntensity] = useState({
+    avgRPE: {
+      squat: 0,
+      bench: 0,
+      deadlift: 0,
+      overall: 0,
+    },
+    avgIntensity: {
+      squat: 0,
+      bench: 0,
+      deadlift: 0,
+    },
+  });
 
   // Refresh data when component mounts
   useEffect(() => {
     refreshData();
+    loadTrainingData();
   }, []);
+
+  const loadTrainingData = async () => {
+    try {
+      const data = await getTrainingHistory(30);
+      setTrainingData(data);
+      calculatePRs(data);
+      calculateFrequency(data);
+      calculateIntensity(data);
+    } catch (error) {
+      console.error("Error loading training data:", error);
+    }
+  };
+
+  const calculatePRs = (data: any[]) => {
+    const newPrs = {
+      squat: { weight: 0, estimated1rm: 0, date: null },
+      bench: { weight: 0, estimated1rm: 0, date: null },
+      deadlift: { weight: 0, estimated1rm: 0, date: null },
+    };
+
+    data.forEach((entry) => {
+      const liftType = entry.lift_type as keyof typeof newPrs;
+      if (
+        newPrs[liftType] &&
+        entry.estimated_1rm > newPrs[liftType].estimated1rm
+      ) {
+        newPrs[liftType] = {
+          weight: entry.weight,
+          estimated1rm: entry.estimated_1rm,
+          date: entry.training_date,
+        };
+      }
+    });
+
+    setPrs(newPrs);
+  };
+
+  const calculateFrequency = (data: any[]) => {
+    const freq = {
+      squat: 0,
+      bench: 0,
+      deadlift: 0,
+      total: data.length,
+    };
+
+    data.forEach((entry) => {
+      const liftType = entry.lift_type as keyof typeof freq;
+      if (freq[liftType] !== undefined) {
+        freq[liftType]++;
+      }
+    });
+
+    setFrequency(freq);
+  };
+
+  const calculateIntensity = (data: any[]) => {
+    const liftGroups = {
+      squat: data.filter((e) => e.lift_type === "squat"),
+      bench: data.filter((e) => e.lift_type === "bench"),
+      deadlift: data.filter((e) => e.lift_type === "deadlift"),
+    };
+
+    const avgRPE = {
+      squat:
+        liftGroups.squat.length > 0
+          ? liftGroups.squat.reduce((sum, e) => sum + (e.rpe || 0), 0) /
+            liftGroups.squat.length
+          : 0,
+      bench:
+        liftGroups.bench.length > 0
+          ? liftGroups.bench.reduce((sum, e) => sum + (e.rpe || 0), 0) /
+            liftGroups.bench.length
+          : 0,
+      deadlift:
+        liftGroups.deadlift.length > 0
+          ? liftGroups.deadlift.reduce((sum, e) => sum + (e.rpe || 0), 0) /
+            liftGroups.deadlift.length
+          : 0,
+      overall:
+        data.length > 0
+          ? data.reduce((sum, e) => sum + (e.rpe || 0), 0) / data.length
+          : 0,
+    };
+
+    const avgIntensity = {
+      squat:
+        liftGroups.squat.length > 0
+          ? liftGroups.squat.reduce(
+              (sum, e) => sum + (e.weight / (currentStats.squatMax || 1)) * 100,
+              0,
+            ) / liftGroups.squat.length
+          : 0,
+      bench:
+        liftGroups.bench.length > 0
+          ? liftGroups.bench.reduce(
+              (sum, e) => sum + (e.weight / (currentStats.benchMax || 1)) * 100,
+              0,
+            ) / liftGroups.bench.length
+          : 0,
+      deadlift:
+        liftGroups.deadlift.length > 0
+          ? liftGroups.deadlift.reduce(
+              (sum, e) =>
+                sum + (e.weight / (currentStats.deadliftMax || 1)) * 100,
+              0,
+            ) / liftGroups.deadlift.length
+          : 0,
+    };
+
+    setIntensity({ avgRPE, avgIntensity });
+  };
 
   const { convertWeight, formatWeight } = usePowerlifting();
   const { unitPreference } = state;
@@ -227,118 +367,152 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
           </Alert>
         )}
 
-        {/* Score Calculator */}
+        {/* PR Tracking */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <Award className="h-5 w-5 text-yellow-500" />
-              Strength Score Calculator
+              Personal Records
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Calculate your Wilks and DOTS scores to compare your strength
-              across weight classes
+              Your best lifts from training sessions
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="bodyweight" className="text-gray-300">
-                  Bodyweight ({unitPreference})
-                </Label>
-                <Input
-                  id="bodyweight"
-                  type="number"
-                  value={calculatorInputs.bodyweight}
-                  onChange={(e) =>
-                    handleInputChange("bodyweight", e.target.value)
-                  }
-                  placeholder="0"
-                  className="bg-gray-700 border-gray-600 text-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="squat" className="text-gray-300">
-                  Squat ({unitPreference})
-                </Label>
-                <Input
-                  id="squat"
-                  type="number"
-                  value={calculatorInputs.squat}
-                  onChange={(e) => handleInputChange("squat", e.target.value)}
-                  placeholder="0"
-                  className="bg-gray-700 border-gray-600 text-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="bench" className="text-gray-300">
-                  Bench ({unitPreference})
-                </Label>
-                <Input
-                  id="bench"
-                  type="number"
-                  value={calculatorInputs.bench}
-                  onChange={(e) => handleInputChange("bench", e.target.value)}
-                  placeholder="0"
-                  className="bg-gray-700 border-gray-600 text-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="deadlift" className="text-gray-300">
-                  Deadlift ({unitPreference})
-                </Label>
-                <Input
-                  id="deadlift"
-                  type="number"
-                  value={calculatorInputs.deadlift}
-                  onChange={(e) =>
-                    handleInputChange("deadlift", e.target.value)
-                  }
-                  placeholder="0"
-                  className="bg-gray-700 border-gray-600 text-white"
-                />
-              </div>
-            </div>
-
-            <Button
-              onClick={loadCurrentStats}
-              variant="outline"
-              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
-            >
-              Load Current Stats
-            </Button>
-
-            <Separator />
-
+          <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.entries(prs).map(([lift, data]) => (
+                <div key={lift} className="bg-gray-700/50 p-4 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white capitalize mb-1">
+                      {lift}
+                    </div>
+                    <div className="text-2xl font-bold text-yellow-400 mb-1">
+                      {formatWeight(data.weight)}
+                    </div>
+                    <div className="text-sm text-gray-400 mb-2">
+                      Est. 1RM: {formatWeight(data.estimated1rm)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {data.date
+                        ? new Date(data.date).toLocaleDateString()
+                        : "No data"}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Training Frequency */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Calendar className="h-5 w-5 text-green-500" />
+              Training Frequency (Last 30 Days)
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              How often you've trained each lift
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-red-900/30 rounded-lg border border-red-500/30">
+                <div className="text-2xl font-bold text-red-400">
+                  {frequency.squat}
+                </div>
+                <div className="text-sm text-gray-400">Squat Sessions</div>
+              </div>
               <div className="text-center p-4 bg-blue-900/30 rounded-lg border border-blue-500/30">
                 <div className="text-2xl font-bold text-blue-400">
-                  {currentTotal.toFixed(0)}
+                  {frequency.bench}
                 </div>
-                <div className="text-sm text-gray-400">
-                  Total ({unitPreference})
-                </div>
+                <div className="text-sm text-gray-400">Bench Sessions</div>
               </div>
               <div className="text-center p-4 bg-green-900/30 rounded-lg border border-green-500/30">
                 <div className="text-2xl font-bold text-green-400">
-                  {wilksScore.toFixed(1)}
+                  {frequency.deadlift}
                 </div>
-                <div className="text-sm text-gray-400">Wilks Score</div>
+                <div className="text-sm text-gray-400">Deadlift Sessions</div>
               </div>
               <div className="text-center p-4 bg-purple-900/30 rounded-lg border border-purple-500/30">
                 <div className="text-2xl font-bold text-purple-400">
-                  {dotsScore.toFixed(1)}
+                  {frequency.total}
                 </div>
-                <div className="text-sm text-gray-400">DOTS Score</div>
+                <div className="text-sm text-gray-400">Total Sessions</div>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            <div className="flex items-center justify-center gap-2">
-              <Badge
-                className={`${strengthLevel.color} text-white border-none`}
-              >
-                {strengthLevel.level}
-              </Badge>
-              <span className="text-sm text-gray-400">Strength Level</span>
+        {/* Intensity Metrics */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Activity className="h-5 w-5 text-orange-500" />
+              Training Intensity
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Average RPE and intensity percentages
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-white font-semibold mb-3">Average RPE</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-red-400">
+                      {intensity.avgRPE.squat.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Squat</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-blue-400">
+                      {intensity.avgRPE.bench.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Bench</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-green-400">
+                      {intensity.avgRPE.deadlift.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Deadlift</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-white">
+                      {intensity.avgRPE.overall.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Overall</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-white font-semibold mb-3">
+                  Average Intensity (% of 1RM)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-red-400">
+                      {intensity.avgIntensity.squat.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-400">Squat</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-blue-400">
+                      {intensity.avgIntensity.bench.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-400">Bench</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-green-400">
+                      {intensity.avgIntensity.deadlift.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-400">Deadlift</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -486,156 +660,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
                 </div>
                 <div className="text-xs text-gray-400">
                   Deadlift ({unitPreference})
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* PR Tracking */}
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Award className="h-5 w-5 text-yellow-500" />
-              Personal Records
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Your best lifts from training sessions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Object.entries(prs).map(([lift, data]) => (
-                <div key={lift} className="bg-gray-700/50 p-4 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-white capitalize mb-1">
-                      {lift}
-                    </div>
-                    <div className="text-2xl font-bold text-yellow-400 mb-1">
-                      {formatWeight(data.weight)}
-                    </div>
-                    <div className="text-sm text-gray-400 mb-2">
-                      Est. 1RM: {formatWeight(data.estimated1rm)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {data.date
-                        ? new Date(data.date).toLocaleDateString()
-                        : "No data"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Training Frequency */}
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Calendar className="h-5 w-5 text-green-500" />
-              Training Frequency (Last 30 Days)
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              How often you've trained each lift
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-red-900/30 rounded-lg border border-red-500/30">
-                <div className="text-2xl font-bold text-red-400">
-                  {frequency.squat}
-                </div>
-                <div className="text-sm text-gray-400">Squat Sessions</div>
-              </div>
-              <div className="text-center p-4 bg-blue-900/30 rounded-lg border border-blue-500/30">
-                <div className="text-2xl font-bold text-blue-400">
-                  {frequency.bench}
-                </div>
-                <div className="text-sm text-gray-400">Bench Sessions</div>
-              </div>
-              <div className="text-center p-4 bg-green-900/30 rounded-lg border border-green-500/30">
-                <div className="text-2xl font-bold text-green-400">
-                  {frequency.deadlift}
-                </div>
-                <div className="text-sm text-gray-400">Deadlift Sessions</div>
-              </div>
-              <div className="text-center p-4 bg-purple-900/30 rounded-lg border border-purple-500/30">
-                <div className="text-2xl font-bold text-purple-400">
-                  {frequency.total}
-                </div>
-                <div className="text-sm text-gray-400">Total Sessions</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Intensity Metrics */}
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Activity className="h-5 w-5 text-orange-500" />
-              Training Intensity
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Average RPE and intensity percentages
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-white font-semibold mb-3">Average RPE</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="text-center p-3 bg-gray-700/50 rounded">
-                    <div className="text-lg font-bold text-red-400">
-                      {intensity.avgRPE.squat.toFixed(1)}
-                    </div>
-                    <div className="text-xs text-gray-400">Squat</div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-700/50 rounded">
-                    <div className="text-lg font-bold text-blue-400">
-                      {intensity.avgRPE.bench.toFixed(1)}
-                    </div>
-                    <div className="text-xs text-gray-400">Bench</div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-700/50 rounded">
-                    <div className="text-lg font-bold text-green-400">
-                      {intensity.avgRPE.deadlift.toFixed(1)}
-                    </div>
-                    <div className="text-xs text-gray-400">Deadlift</div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-700/50 rounded">
-                    <div className="text-lg font-bold text-white">
-                      {intensity.avgRPE.overall.toFixed(1)}
-                    </div>
-                    <div className="text-xs text-gray-400">Overall</div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-white font-semibold mb-3">
-                  Average Intensity (% of 1RM)
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="text-center p-3 bg-gray-700/50 rounded">
-                    <div className="text-lg font-bold text-red-400">
-                      {intensity.avgIntensity.squat.toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-gray-400">Squat</div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-700/50 rounded">
-                    <div className="text-lg font-bold text-blue-400">
-                      {intensity.avgIntensity.bench.toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-gray-400">Bench</div>
-                  </div>
-                  <div className="text-center p-3 bg-gray-700/50 rounded">
-                    <div className="text-lg font-bold text-green-400">
-                      {intensity.avgIntensity.deadlift.toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-gray-400">Deadlift</div>
-                  </div>
                 </div>
               </div>
             </div>
