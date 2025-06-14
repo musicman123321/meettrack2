@@ -5,6 +5,18 @@ export interface MeetInfo {
   location?: string;
 }
 
+export interface Meet {
+  id: string;
+  user_id: string;
+  meet_name?: string;
+  meet_date: string;
+  location?: string;
+  target_weight_class: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CurrentStats {
   weight: number;
   squatMax: number;

@@ -92,6 +92,11 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
     loadTrainingData();
   }, [filterDays]);
 
+  // Refresh data when component mounts to ensure fresh data
+  useEffect(() => {
+    loadTrainingData(false); // Don't force refresh on mount, use cache if available
+  }, []);
+
   const loadTrainingData = async (forceRefresh = false) => {
     setLoading(true);
     try {
