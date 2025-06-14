@@ -35,4 +35,14 @@ export default defineConfig({
     // @ts-ignore
     allowedHosts: true,
   },
+<<<<<<< HEAD
+=======
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
+>>>>>>> 9db752ddc82314881d22f3bc3cbdc0c09659c9cf
 });
