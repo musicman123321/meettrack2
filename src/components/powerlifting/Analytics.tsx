@@ -492,6 +492,156 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
           </CardContent>
         </Card>
 
+        {/* PR Tracking */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Award className="h-5 w-5 text-yellow-500" />
+              Personal Records
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Your best lifts from training sessions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.entries(prs).map(([lift, data]) => (
+                <div key={lift} className="bg-gray-700/50 p-4 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white capitalize mb-1">
+                      {lift}
+                    </div>
+                    <div className="text-2xl font-bold text-yellow-400 mb-1">
+                      {formatWeight(data.weight)}
+                    </div>
+                    <div className="text-sm text-gray-400 mb-2">
+                      Est. 1RM: {formatWeight(data.estimated1rm)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {data.date
+                        ? new Date(data.date).toLocaleDateString()
+                        : "No data"}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Training Frequency */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Calendar className="h-5 w-5 text-green-500" />
+              Training Frequency (Last 30 Days)
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              How often you've trained each lift
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-red-900/30 rounded-lg border border-red-500/30">
+                <div className="text-2xl font-bold text-red-400">
+                  {frequency.squat}
+                </div>
+                <div className="text-sm text-gray-400">Squat Sessions</div>
+              </div>
+              <div className="text-center p-4 bg-blue-900/30 rounded-lg border border-blue-500/30">
+                <div className="text-2xl font-bold text-blue-400">
+                  {frequency.bench}
+                </div>
+                <div className="text-sm text-gray-400">Bench Sessions</div>
+              </div>
+              <div className="text-center p-4 bg-green-900/30 rounded-lg border border-green-500/30">
+                <div className="text-2xl font-bold text-green-400">
+                  {frequency.deadlift}
+                </div>
+                <div className="text-sm text-gray-400">Deadlift Sessions</div>
+              </div>
+              <div className="text-center p-4 bg-purple-900/30 rounded-lg border border-purple-500/30">
+                <div className="text-2xl font-bold text-purple-400">
+                  {frequency.total}
+                </div>
+                <div className="text-sm text-gray-400">Total Sessions</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Intensity Metrics */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Activity className="h-5 w-5 text-orange-500" />
+              Training Intensity
+            </CardTitle>
+            <CardDescription className="text-gray-400">
+              Average RPE and intensity percentages
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-white font-semibold mb-3">Average RPE</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-red-400">
+                      {intensity.avgRPE.squat.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Squat</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-blue-400">
+                      {intensity.avgRPE.bench.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Bench</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-green-400">
+                      {intensity.avgRPE.deadlift.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Deadlift</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-white">
+                      {intensity.avgRPE.overall.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-400">Overall</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-white font-semibold mb-3">
+                  Average Intensity (% of 1RM)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-red-400">
+                      {intensity.avgIntensity.squat.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-400">Squat</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-blue-400">
+                      {intensity.avgIntensity.bench.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-400">Bench</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-700/50 rounded">
+                    <div className="text-lg font-bold text-green-400">
+                      {intensity.avgIntensity.deadlift.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-400">Deadlift</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Strength Standards Reference */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
