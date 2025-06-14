@@ -29,7 +29,6 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { usePowerlifting } from "../../contexts/PowerliftingContext";
-import { useAuth } from "../../../supabase/auth";
 import LiftCard from "./LiftCard";
 import AnimatedProgressBar from "./AnimatedProgressBar";
 import { toast } from "@/components/ui/use-toast";
