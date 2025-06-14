@@ -39,24 +39,24 @@ type PowerliftingAction =
 
 const initialState: PowerliftingState = {
   meetInfo: {
-    meetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
-    targetWeightClass: 83,
+    meetDate: new Date(), // Current date instead of 90 days from now
+    targetWeightClass: 0,
     meetName: "",
     location: "",
   },
   currentStats: {
-    weight: 80,
-    squatMax: 140,
-    benchMax: 100,
-    deadliftMax: 180,
+    weight: 0,
+    squatMax: 0,
+    benchMax: 0,
+    deadliftMax: 0,
   },
   meetGoals: {
-    squat: { opener: 125, second: 140, third: 150, confidence: 8 },
-    bench: { opener: 90, second: 100, third: 107.5, confidence: 7 },
-    deadlift: { opener: 162.5, second: 180, third: 190, confidence: 9 },
+    squat: { opener: 0, second: 0, third: 0, confidence: 10 },
+    bench: { opener: 0, second: 0, third: 0, confidence: 10 },
+    deadlift: { opener: 0, second: 0, third: 0, confidence: 10 },
   },
   equipmentChecklist: DEFAULT_EQUIPMENT,
-  weightHistory: [{ date: new Date().toISOString().split("T")[0], weight: 80 }],
+  weightHistory: [],
   unitPreference: "kg",
 };
 
@@ -347,53 +347,56 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   };
 
   // Transform meet goals from database format, with fallback to user_lifts
-  const transformMeetGoalsFromDB = (goalsData: any[], userLiftsData: any[] = []): MeetGoals => {
-  const goals: MeetGoals = {
-    squat: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
-    bench: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
-    deadlift: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+  const transformMeetGoalsFromDB = (
+    goalsData: any[],
+    userLiftsData: any[] = [],
+  ): MeetGoals => {
+    const goals: MeetGoals = {
+      squat: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+      bench: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+      deadlift: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+    };
+
+    try {
+      // First, apply meet goals if available
+      if (goalsData && Array.isArray(goalsData)) {
+        goalsData.forEach((goal) => {
+          if (goal.lift_type in goals) {
+            goals[goal.lift_type as keyof MeetGoals] = {
+              opener: goal.opener,
+              second: goal.second,
+              third: goal.third,
+              confidence: goal.confidence,
+            };
+          }
+        });
+      }
+
+      // Then, fallback to user_lifts data for confidence and max weights
+      if (userLiftsData && Array.isArray(userLiftsData)) {
+        userLiftsData.forEach((lift) => {
+          if (lift.lift_type in goals) {
+            const currentGoal = goals[lift.lift_type as keyof MeetGoals];
+            // Update confidence from user_lifts if available
+            if (lift.confidence) {
+              currentGoal.confidence = lift.confidence;
+            }
+            // If no meet goals exist, generate reasonable attempts based on max weight
+            if ((!goalsData || goalsData.length === 0) && lift.max_weight > 0) {
+              const maxWeight = lift.max_weight;
+              currentGoal.opener = Math.round(maxWeight * 0.85 * 4) / 4; // 85% rounded to nearest 2.5
+              currentGoal.second = Math.round(maxWeight * 0.95 * 4) / 4; // 95% rounded to nearest 2.5
+              currentGoal.third = Math.round(maxWeight * 1.05 * 4) / 4; // 105% rounded to nearest 2.5
+            }
+          }
+        });
+      }
+    } catch (err) {
+      errorLog("Error transforming meet goals from DB", err);
+    }
+
+    return goals;
   };
-
-  try {
-    // First, apply meet goals if available
-    if (goalsData && Array.isArray(goalsData)) {
-      goalsData.forEach((goal) => {
-        if (goal.lift_type in goals) {
-          goals[goal.lift_type as keyof MeetGoals] = {
-            opener: goal.opener,
-            second: goal.second,
-            third: goal.third,
-            confidence: goal.confidence,
-          };
-        }
-      });
-    }
-
-    // Then, fallback to user_lifts data for confidence and max weights
-    if (userLiftsData && Array.isArray(userLiftsData)) {
-      userLiftsData.forEach((lift) => {
-        if (lift.lift_type in goals) {
-          const currentGoal = goals[lift.lift_type as keyof MeetGoals];
-          // Update confidence from user_lifts if available
-          if (lift.confidence) {
-            currentGoal.confidence = lift.confidence;
-          }
-          // If no meet goals exist, generate reasonable attempts based on max weight
-          if ((!goalsData || goalsData.length === 0) && lift.max_weight > 0) {
-            const maxWeight = lift.max_weight;
-            currentGoal.opener = Math.round(maxWeight * 0.85 * 4) / 4; // 85% rounded to nearest 2.5
-            currentGoal.second = Math.round(maxWeight * 0.95 * 4) / 4; // 95% rounded to nearest 2.5
-            currentGoal.third = Math.round(maxWeight * 1.05 * 4) / 4; // 105% rounded to nearest 2.5
-          }
-        }
-      });
-    }
-  } catch (err) {
-    errorLog("Error transforming meet goals from DB", err);
-  }
-
-  return goals;
-};
 
   // Transform equipment from database format
   const transformEquipmentFromDB = (equipmentData: any[]): EquipmentItem[] => {
@@ -643,58 +646,62 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   // Add weight entry to Supabase
   const addWeightEntry = async (entry: WeightEntry) => {
-  if (!user?.id) {
-    errorLog("No user found when adding weight entry", null);
-    return;
-  }
-
-  try {
-    debugLog("Adding weight entry:", entry);
-    
-    // First check if an entry already exists for this date
-    const { data: existingEntry, error: fetchError } = await supabase
-      .from("weight_history")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("date", entry.date)
-      .maybeSingle();
-
-    if (fetchError) {
-      throw new Error(`Failed to check for existing weight entry: ${fetchError.message}`);
+    if (!user?.id) {
+      errorLog("No user found when adding weight entry", null);
+      return;
     }
 
-    if (existingEntry) {
-      // Update existing entry
-      const { error: updateError } = await supabase
-        .from("weight_history")
-        .update({ weight: entry.weight })
-        .eq("id", existingEntry.id);
+    try {
+      debugLog("Adding weight entry:", entry);
 
-      if (updateError) {
-        throw new Error(`Failed to update weight entry: ${updateError.message}`);
-      }
-    } else {
-      // Insert new entry
-      const { error: insertError } = await supabase
+      // First check if an entry already exists for this date
+      const { data: existingEntry, error: fetchError } = await supabase
         .from("weight_history")
-        .insert({
-          user_id: user.id,
-          weight: entry.weight,
-          date: entry.date,
-        });
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", entry.date)
+        .maybeSingle();
 
-      if (insertError) {
-        throw new Error(`Failed to add weight entry: ${insertError.message}`);
+      if (fetchError) {
+        throw new Error(
+          `Failed to check for existing weight entry: ${fetchError.message}`,
+        );
       }
+
+      if (existingEntry) {
+        // Update existing entry
+        const { error: updateError } = await supabase
+          .from("weight_history")
+          .update({ weight: entry.weight })
+          .eq("id", existingEntry.id);
+
+        if (updateError) {
+          throw new Error(
+            `Failed to update weight entry: ${updateError.message}`,
+          );
+        }
+      } else {
+        // Insert new entry
+        const { error: insertError } = await supabase
+          .from("weight_history")
+          .insert({
+            user_id: user.id,
+            weight: entry.weight,
+            date: entry.date,
+          });
+
+        if (insertError) {
+          throw new Error(`Failed to add weight entry: ${insertError.message}`);
+        }
+      }
+
+      debugLog("Successfully added/updated weight entry");
+      dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
+    } catch (err: any) {
+      errorLog("Error adding weight entry", err);
+      throw err;
     }
-
-    debugLog("Successfully added/updated weight entry");
-    dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
-  } catch (err: any) {
-    errorLog("Error adding weight entry", err);
-    throw err;
-  }
-};
+  };
 
   // Toggle equipment item in Supabase
   const toggleEquipmentItem = async (itemId: string) => {
@@ -901,152 +908,152 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   // Get training analytics from Supabase
   // Update the getTrainingAnalytics function with proper types
-// First, let's define some helper types to make the code cleaner
-type LiftVolumes = {
-  squat: number;
-  bench: number;
-  deadlift: number;
-};
+  // First, let's define some helper types to make the code cleaner
+  type LiftVolumes = {
+    squat: number;
+    bench: number;
+    deadlift: number;
+  };
 
-type LiftVolumesWithTotal = LiftVolumes & {
-  total: number;
-};
+  type LiftVolumesWithTotal = LiftVolumes & {
+    total: number;
+  };
 
-type DatedLiftVolumes = LiftVolumes & {
-  date: string;
-};
+  type DatedLiftVolumes = LiftVolumes & {
+    date: string;
+  };
 
-type WeeklyLiftVolumes = LiftVolumesWithTotal & {
-  week: string;
-};
+  type WeeklyLiftVolumes = LiftVolumesWithTotal & {
+    week: string;
+  };
 
-// Now update the getTrainingAnalytics function
-const getTrainingAnalytics = async (
-  days: number = 90,
-): Promise<TrainingAnalytics> => {
-  if (!user?.id) {
-    errorLog("No user found when fetching training analytics", null);
-    return {
-      volumeProgression: [],
-      estimatedMaxProgression: [],
-      weeklyVolume: [],
-    };
-  }
-
-  try {
-    debugLog(`Fetching training analytics for last ${days} days`);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-
-    const { data, error } = await supabase
-      .from("training_history")
-      .select("*")
-      .eq("user_id", user.id)
-      .gte("training_date", startDate.toISOString().split("T")[0])
-      .order("training_date", { ascending: true });
-
-    if (error) {
-      throw new Error(`Failed to fetch training analytics: ${error.message}`);
+  // Now update the getTrainingAnalytics function
+  const getTrainingAnalytics = async (
+    days: number = 90,
+  ): Promise<TrainingAnalytics> => {
+    if (!user?.id) {
+      errorLog("No user found when fetching training analytics", null);
+      return {
+        volumeProgression: [],
+        estimatedMaxProgression: [],
+        weeklyVolume: [],
+      };
     }
 
-    debugLog("Successfully fetched training analytics data", data);
+    try {
+      debugLog(`Fetching training analytics for last ${days} days`);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
 
-    // Process data for analytics
-    const entries = data || [];
-    const analytics: TrainingAnalytics = {
-      volumeProgression: [],
-      estimatedMaxProgression: [],
-      weeklyVolume: [],
-    };
+      const { data, error } = await supabase
+        .from("training_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("training_date", startDate.toISOString().split("T")[0])
+        .order("training_date", { ascending: true });
 
-    // Group by date for volume and 1RM progression
-    const dateGroups = entries.reduce<Record<string, LiftVolumes>>(
-      (acc, entry) => {
-        const date = entry.training_date;
-        const liftType = entry.lift_type as keyof LiftVolumes;
-        
-        if (!acc[date]) {
-          acc[date] = { squat: 0, bench: 0, deadlift: 0 };
-        }
-        
-        acc[date][liftType] += entry.volume || 0;
-        return acc;
-      },
-      {}
-    );
+      if (error) {
+        throw new Error(`Failed to fetch training analytics: ${error.message}`);
+      }
 
-    // Volume progression
-    analytics.volumeProgression = Object.entries(dateGroups).map<DatedLiftVolumes>(
-      ([date, volumes]) => ({
+      debugLog("Successfully fetched training analytics data", data);
+
+      // Process data for analytics
+      const entries = data || [];
+      const analytics: TrainingAnalytics = {
+        volumeProgression: [],
+        estimatedMaxProgression: [],
+        weeklyVolume: [],
+      };
+
+      // Group by date for volume and 1RM progression
+      const dateGroups = entries.reduce<Record<string, LiftVolumes>>(
+        (acc, entry) => {
+          const date = entry.training_date;
+          const liftType = entry.lift_type as keyof LiftVolumes;
+
+          if (!acc[date]) {
+            acc[date] = { squat: 0, bench: 0, deadlift: 0 };
+          }
+
+          acc[date][liftType] += entry.volume || 0;
+          return acc;
+        },
+        {},
+      );
+
+      // Volume progression
+      analytics.volumeProgression = Object.entries(
+        dateGroups,
+      ).map<DatedLiftVolumes>(([date, volumes]) => ({
         date,
-        ...volumes
-      })
-    );
+        ...volumes,
+      }));
 
-    // Estimated 1RM progression (take max per day per lift)
-    const maxGroups = entries.reduce<Record<string, LiftVolumes>>(
-      (acc, entry) => {
-        const date = entry.training_date;
-        const liftType = entry.lift_type as keyof LiftVolumes;
-        
-        if (!acc[date]) {
-          acc[date] = { squat: 0, bench: 0, deadlift: 0 };
-        }
-        
-        acc[date][liftType] = Math.max(
-          acc[date][liftType],
-          entry.estimated_1rm || 0,
-        );
-        return acc;
-      },
-      {}
-    );
+      // Estimated 1RM progression (take max per day per lift)
+      const maxGroups = entries.reduce<Record<string, LiftVolumes>>(
+        (acc, entry) => {
+          const date = entry.training_date;
+          const liftType = entry.lift_type as keyof LiftVolumes;
 
-    analytics.estimatedMaxProgression = Object.entries(maxGroups).map<DatedLiftVolumes>(
-      ([date, maxes]) => ({
+          if (!acc[date]) {
+            acc[date] = { squat: 0, bench: 0, deadlift: 0 };
+          }
+
+          acc[date][liftType] = Math.max(
+            acc[date][liftType],
+            entry.estimated_1rm || 0,
+          );
+          return acc;
+        },
+        {},
+      );
+
+      analytics.estimatedMaxProgression = Object.entries(
+        maxGroups,
+      ).map<DatedLiftVolumes>(([date, maxes]) => ({
         date,
-        ...maxes
-      })
-    );
+        ...maxes,
+      }));
 
-    // Weekly volume (group by week)
-    const weekGroups = entries.reduce<Record<string, LiftVolumesWithTotal>>(
-      (acc, entry) => {
-        const date = new Date(entry.training_date);
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        const weekKey = weekStart.toISOString().split("T")[0];
-        const liftType = entry.lift_type as keyof LiftVolumes;
+      // Weekly volume (group by week)
+      const weekGroups = entries.reduce<Record<string, LiftVolumesWithTotal>>(
+        (acc, entry) => {
+          const date = new Date(entry.training_date);
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          const weekKey = weekStart.toISOString().split("T")[0];
+          const liftType = entry.lift_type as keyof LiftVolumes;
 
-        if (!acc[weekKey]) {
-          acc[weekKey] = { squat: 0, bench: 0, deadlift: 0, total: 0 };
-        }
-        
-        const volume = entry.volume || 0;
-        acc[weekKey][liftType] += volume;
-        acc[weekKey].total += volume;
-        return acc;
-      },
-      {}
-    );
+          if (!acc[weekKey]) {
+            acc[weekKey] = { squat: 0, bench: 0, deadlift: 0, total: 0 };
+          }
 
-    analytics.weeklyVolume = Object.entries(weekGroups).map<WeeklyLiftVolumes>(
-      ([week, volumes]) => ({
+          const volume = entry.volume || 0;
+          acc[weekKey][liftType] += volume;
+          acc[weekKey].total += volume;
+          return acc;
+        },
+        {},
+      );
+
+      analytics.weeklyVolume = Object.entries(
+        weekGroups,
+      ).map<WeeklyLiftVolumes>(([week, volumes]) => ({
         week,
-        ...volumes
-      })
-    );
+        ...volumes,
+      }));
 
-    return analytics;
-  } catch (err: any) {
-    errorLog("Error fetching training analytics", err);
-    return {
-      volumeProgression: [],
-      estimatedMaxProgression: [],
-      weeklyVolume: [],
-    };
-  }
-};
+      return analytics;
+    } catch (err: any) {
+      errorLog("Error fetching training analytics", err);
+      return {
+        volumeProgression: [],
+        estimatedMaxProgression: [],
+        weeklyVolume: [],
+      };
+    }
+  };
 
   // Refresh all data
   const refreshData = async () => {
