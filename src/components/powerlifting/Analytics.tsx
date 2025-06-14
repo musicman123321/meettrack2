@@ -83,6 +83,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
       deadlift: { weight: 0, estimated1rm: 0, date: null },
     };
 
+    if (!data || data.length === 0) {
+      setPrs(newPrs);
+      return;
+    }
+
     data.forEach((entry) => {
       const liftType = entry.lift_type as keyof typeof newPrs;
       if (newPrs[liftType]) {
@@ -117,8 +122,13 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
       squat: 0,
       bench: 0,
       deadlift: 0,
-      total: data.length,
+      total: data ? data.length : 0,
     };
+
+    if (!data || data.length === 0) {
+      setFrequency(freq);
+      return;
+    }
 
     data.forEach((entry) => {
       const liftType = entry.lift_type as keyof typeof freq;
@@ -131,6 +141,23 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
   };
 
   const calculateIntensity = (data: any[]) => {
+    if (!data || data.length === 0) {
+      setIntensity({
+        avgRPE: {
+          squat: 0,
+          bench: 0,
+          deadlift: 0,
+          overall: 0,
+        },
+        avgIntensity: {
+          squat: 0,
+          bench: 0,
+          deadlift: 0,
+        },
+      });
+      return;
+    }
+
     const liftGroups = {
       squat: data.filter((e) => e.lift_type === "squat"),
       bench: data.filter((e) => e.lift_type === "bench"),
@@ -407,10 +434,10 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
                     <div className="text-sm text-gray-400 mb-2">
                       Est. 1RM: {formatWeight(data.estimated1rm)}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 mt-1">
                       {data.date
                         ? new Date(data.date).toLocaleDateString()
-                        : "No data"}
+                        : "No data yet"}
                     </div>
                   </div>
                 </div>
