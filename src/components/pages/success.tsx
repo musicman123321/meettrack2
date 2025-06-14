@@ -24,7 +24,7 @@ export default function Success() {
 
     // Track successful payment
     if (type === "donation" && paymentAmount) {
-      analytics.trackDonationSuccess(parseFloat(paymentAmount));
+      analytics.trackDonationClick(parseFloat(paymentAmount));
     }
   }, [searchParams]);
 
