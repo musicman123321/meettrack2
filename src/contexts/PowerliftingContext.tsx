@@ -154,9 +154,6 @@ interface PowerliftingContextType {
     forceRefresh?: boolean,
   ) => Promise<TrainingAnalytics>;
   clearCache: () => void;
-  getAllMeets: () => Promise<any[]>;
-  setActiveMeet: (meetId: string) => Promise<void>;
-  deleteMeet: (meetId: string) => Promise<void>;
 }
 
 const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
@@ -174,31 +171,25 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     TRAINING_HISTORY: "powerlifting_training_history",
     ANALYTICS: "powerlifting_analytics",
     USER_DATA: "powerlifting_user_data",
-    MEETS_LIST: "powerlifting_meets_list",
   };
-  const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   // Cache utilities
-  const getCachedData = useCallback(
-    (key: string) => {
-      try {
-        const cached = localStorage.getItem(key);
-        if (cached) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_DURATION) {
-            debugLog(`Using cached data for key: ${key}`);
-            return data;
-          }
-          localStorage.removeItem(key);
-          debugLog(`Cache expired for key: ${key}`);
+  const getCachedData = useCallback((key: string) => {
+    try {
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          return data;
         }
-      } catch (error) {
-        console.warn("Cache read error:", error);
+        localStorage.removeItem(key);
       }
-      return null;
-    },
-    [CACHE_DURATION],
-  );
+    } catch (error) {
+      console.warn("Cache read error:", error);
+    }
+    return null;
+  }, []);
 
   const setCachedData = useCallback((key: string, data: any) => {
     try {
@@ -209,7 +200,6 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
           timestamp: Date.now(),
         }),
       );
-      debugLog(`Data cached for key: ${key}`);
     } catch (error) {
       console.warn("Cache write error:", error);
     }
@@ -233,23 +223,11 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   };
 
   // Fetch user data from Supabase
-  const fetchUserData = async (forceRefresh = false) => {
+  const fetchUserData = async () => {
     if (!user?.id) {
       debugLog("No user found, skipping data fetch");
       setLoading(false);
       return;
-    }
-
-    // Check cache first unless force refresh
-    const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
-    if (!forceRefresh) {
-      const cachedData = getCachedData(cacheKey);
-      if (cachedData) {
-        debugLog("Using cached user data");
-        dispatch({ type: "LOAD_STATE", payload: cachedData });
-        setLoading(false);
-        return;
-      }
     }
 
     try {
@@ -307,18 +285,16 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       }
       debugLog("Current stats fetched:", currentStatsData);
 
-      // Fetch active meet (get the most recent one if multiple exist)
+      // Fetch active meet
       debugLog("Fetching active meet...");
       const { data: meetData, error: meetError } = await supabase
         .from("meets")
         .select("*")
         .eq("user_id", user.id)
         .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
         .maybeSingle();
 
-      if (meetError && meetError.code !== "PGRST116") {
+      if (meetError) {
         errorLog("Error fetching meet data", meetError);
         throw new Error(`Failed to fetch meet data: ${meetError.message}`);
       }
@@ -415,10 +391,6 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       };
 
       debugLog("Successfully fetched user data:", newState);
-
-      // Cache the fetched data
-      setCachedData(cacheKey, newState);
-
       dispatch({ type: "LOAD_STATE", payload: newState });
     } catch (err: any) {
       errorLog("Error fetching user data", err);
@@ -527,84 +499,6 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  // Add meet management functions
-  const getAllMeets = async () => {
-    if (!user?.id) return [];
-
-    const cacheKey = `${CACHE_KEYS.MEETS_LIST}_${user.id}`;
-    const cachedData = getCachedData(cacheKey);
-    if (cachedData) {
-      return cachedData;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("meets")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw new Error(`Failed to fetch meets: ${error.message}`);
-      }
-
-      setCachedData(cacheKey, data || []);
-      return data || [];
-    } catch (err: any) {
-      errorLog("Error fetching meets", err);
-      return [];
-    }
-  };
-
-  const setActiveMeet = async (meetId: string) => {
-    if (!user?.id) return;
-
-    try {
-      // Set all meets to inactive
-      await supabase
-        .from("meets")
-        .update({ is_active: false })
-        .eq("user_id", user.id);
-
-      // Set the selected meet to active
-      await supabase
-        .from("meets")
-        .update({ is_active: true })
-        .eq("id", meetId)
-        .eq("user_id", user.id);
-
-      // Clear caches and refresh data
-      clearCache();
-      await fetchUserData(true);
-    } catch (err: any) {
-      errorLog("Error setting active meet", err);
-      throw err;
-    }
-  };
-
-  const deleteMeet = async (meetId: string) => {
-    if (!user?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from("meets")
-        .delete()
-        .eq("id", meetId)
-        .eq("user_id", user.id);
-
-      if (error) {
-        throw new Error(`Failed to delete meet: ${error.message}`);
-      }
-
-      // Clear caches and refresh data
-      clearCache();
-      await fetchUserData(true);
-    } catch (err: any) {
-      errorLog("Error deleting meet", err);
-      throw err;
-    }
-  };
-
   const calculateWilks = (
     total: number,
     bodyweight: number,
@@ -654,9 +548,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   const getDaysUntilMeet = (): number => {
     const today = new Date();
-    const meetDate = state.meetInfo.meetDate instanceof Date 
-      ? state.meetInfo.meetDate 
-      : new Date(state.meetInfo.meetDate);
+    const meetDate = new Date(state.meetInfo.meetDate);
     const diffTime = meetDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
@@ -784,35 +676,24 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
     try {
       debugLog("Saving meet info:", info);
-
-      // First, set all existing meets to inactive
-      await supabase
-        .from("meets")
-        .update({ is_active: false })
-        .eq("user_id", user.id);
-
-      // Then insert the new meet as active
-      const { error } = await supabase.from("meets").insert({
+      const { error } = await supabase.from("meets").upsert({
         user_id: user.id,
         meet_name: info.meetName || "",
         meet_date: info.meetDate.toISOString().split("T")[0],
         location: info.location || "",
         target_weight_class: info.targetWeightClass,
         is_active: true,
+        updated_at: new Date().toISOString(),
       });
 
       if (error) {
         throw new Error(`Failed to save meet info: ${error.message}`);
       }
 
-      // Clear caches to force refresh
-      clearCache();
-
       debugLog("Successfully saved meet info");
       dispatch({ type: "SET_MEET_INFO", payload: info });
     } catch (err: any) {
       errorLog("Error saving meet info", err);
-      throw err;
     }
   };
 
@@ -1025,7 +906,10 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     try {
       debugLog("Adding training entry:", entry);
 
-      // Don't include volume and estimated_1rm as they are generated columns
+      // Calculate volume and estimated 1RM
+      const volume = entry.sets * entry.reps * entry.weight;
+      const estimated1rm = entry.weight * (1 + entry.reps / 30);
+
       const { error } = await supabase.from("training_history").insert({
         user_id: user.id,
         lift_type: entry.lift_type,
@@ -1034,6 +918,8 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         reps: entry.reps,
         weight: entry.weight,
         rpe: entry.rpe || null,
+        volume: volume,
+        estimated_1rm: estimated1rm,
       });
 
       if (error) {
@@ -1281,8 +1167,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   // Refresh all data
   const refreshData = async () => {
-    clearCache();
-    await fetchUserData(true);
+    await fetchUserData();
   };
 
   return (
@@ -1311,9 +1196,6 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         getTrainingHistory,
         getTrainingAnalytics,
         clearCache,
-        getAllMeets,
-        setActiveMeet,
-        deleteMeet,
       }}
     >
       {children}
