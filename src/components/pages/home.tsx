@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import TrainingProgressBar from "@/components/powerlifting/TrainingProgressBar";
 import {
   Card,
   CardContent,
@@ -366,19 +367,22 @@ export default function Home() {
             lifts, manage your weight cut, and ensure you're ready to dominate
             on meet day.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col gap-6 justify-center items-center">
             {user ? (
-              <Link to="/dashboard">
-                <Button
-                  size="lg"
-                  className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
-                >
-                  Open Dashboard
-                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              </Link>
-            ) : (
               <>
+                <Link to="/dashboard">
+                  <Button
+                    size="lg"
+                    className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
+                  >
+                    Open Dashboard
+                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  </Button>
+                </Link>
+                <TrainingProgressBar className="mt-4" />
+              </>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link to="/signup" className="w-full sm:w-auto">
                   <Button
                     size="lg"
@@ -397,7 +401,7 @@ export default function Home() {
                     Sign In
                   </Button>
                 </Link>
-              </>
+              </div>
             )}
           </div>
         </div>

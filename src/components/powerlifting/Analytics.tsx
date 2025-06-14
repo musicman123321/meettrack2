@@ -64,9 +64,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
     loadTrainingData();
   }, []);
 
-  const loadTrainingData = async () => {
+  const loadTrainingData = async (forceRefresh = false) => {
     try {
-      const data = await getTrainingHistory(30);
+      const data = await getTrainingHistory(30, forceRefresh);
       setTrainingData(data);
       calculatePRs(data);
       calculateFrequency(data);
@@ -85,15 +85,27 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
 
     data.forEach((entry) => {
       const liftType = entry.lift_type as keyof typeof newPrs;
-      if (
-        newPrs[liftType] &&
-        entry.estimated_1rm > newPrs[liftType].estimated1rm
-      ) {
-        newPrs[liftType] = {
-          weight: entry.weight,
-          estimated1rm: entry.estimated_1rm,
-          date: entry.training_date,
-        };
+      if (newPrs[liftType]) {
+        // Calculate estimated 1RM if not present
+        const estimated1rm =
+          entry.estimated_1rm || entry.weight * (1 + entry.reps / 30);
+
+        // Update PR if this is a new max
+        if (estimated1rm > newPrs[liftType].estimated1rm) {
+          newPrs[liftType] = {
+            weight: entry.weight,
+            estimated1rm: estimated1rm,
+            date: entry.training_date,
+          };
+        }
+
+        // Also check for actual weight PR (regardless of reps)
+        if (entry.weight > newPrs[liftType].weight) {
+          newPrs[liftType].weight = Math.max(
+            newPrs[liftType].weight,
+            entry.weight,
+          );
+        }
       }
     });
 
@@ -356,7 +368,10 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
             <AlertDescription className="text-red-200">
               Error loading data: {error}
               <Button
-                onClick={refreshData}
+                onClick={() => {
+                  refreshData();
+                  loadTrainingData(true);
+                }}
                 variant="outline"
                 size="sm"
                 className="ml-2 h-6 px-2 text-xs"

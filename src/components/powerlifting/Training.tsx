@@ -92,12 +92,12 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
     loadTrainingData();
   }, [filterDays]);
 
-  const loadTrainingData = async () => {
+  const loadTrainingData = async (forceRefresh = false) => {
     setLoading(true);
     try {
       const [history, analyticsData] = await Promise.all([
-        getTrainingHistory(filterDays),
-        getTrainingAnalytics(filterDays),
+        getTrainingHistory(filterDays, forceRefresh),
+        getTrainingAnalytics(filterDays, forceRefresh),
       ]);
       setTrainingHistory(history);
       setAnalytics(analyticsData);
@@ -161,8 +161,8 @@ const Training: React.FC<TrainingProps> = ({ className = "" }) => {
         rpe: undefined,
       });
 
-      // Reload data
-      await loadTrainingData();
+      // Reload data with force refresh
+      await loadTrainingData(true);
     } catch (error) {
       toast({
         title: "Error logging training",
