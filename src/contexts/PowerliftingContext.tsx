@@ -654,7 +654,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   const getDaysUntilMeet = (): number => {
     const today = new Date();
-    const meetDate = new Date(state.meetInfo.meetDate);
+    const meetDate = state.meetInfo.meetDate instanceof Date 
+      ? state.meetInfo.meetDate 
+      : new Date(state.meetInfo.meetDate);
     const diffTime = meetDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
