@@ -48,7 +48,7 @@ export default function LiftCard({
   } = usePowerlifting();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+
   const [editForm, setEditForm] = useState({
     currentMax: "",
     opener: "",
@@ -138,22 +138,6 @@ export default function LiftCard({
                     <CardTitle className="text-white">{liftName}</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setInfoDialogOpen(true);
-                          }}
-                          className="p-1 hover:bg-gray-700 rounded transition-colors"
-                        >
-                          <HelpCircle className="h-3 w-3 text-gray-500 hover:text-gray-300" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Click for progress explanation</p>
-                      </TooltipContent>
-                    </Tooltip>
                     <Edit className="h-4 w-4 text-gray-500" />
                     <Badge
                       variant="outline"
@@ -340,94 +324,6 @@ export default function LiftCard({
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {saving ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Progress Explanation Dialog */}
-        <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
-          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-blue-500" />
-                {liftName} Progress Explanation
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 text-sm">
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <h4 className="font-semibold text-blue-400 mb-2">
-                  Current Status
-                </h4>
-                <p className="text-gray-300">
-                  Your current max:{" "}
-                  <span className="font-bold text-white">
-                    {formatWeight(currentMax)}
-                  </span>
-                </p>
-                <p className="text-gray-300">
-                  Target (3rd attempt):{" "}
-                  <span className="font-bold text-white">
-                    {formatWeight(attempts.third)}
-                  </span>
-                </p>
-              </div>
-
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <h4 className="font-semibold text-green-400 mb-2">
-                  Progress Calculation
-                </h4>
-                <p className="text-gray-300 mb-2">
-                  Progress = (Current Max ÷ Target) × 100
-                </p>
-                <p className="text-gray-300">
-                  {Math.round(progress)}% = ({formatWeight(currentMax)} ÷{" "}
-                  {formatWeight(attempts.third)}) × 100
-                </p>
-              </div>
-
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <h4 className="font-semibold text-purple-400 mb-2">
-                  Meet Attempts
-                </h4>
-                <div className="space-y-1 text-xs">
-                  <p>
-                    <span className="text-gray-400">Opener (safe):</span>{" "}
-                    <span className="text-white">
-                      {formatWeight(attempts.opener)}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Second (realistic):</span>{" "}
-                    <span className="text-white">
-                      {formatWeight(attempts.second)}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="text-gray-400">Third (goal):</span>{" "}
-                    <span className="text-white">
-                      {formatWeight(attempts.third)}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-gray-700/50 p-3 rounded-lg">
-                <h4 className="font-semibold text-yellow-400 mb-2">
-                  Confidence Level
-                </h4>
-                <p className="text-gray-300">
-                  {attempts.confidence}/10 - How confident you feel about
-                  hitting your third attempt
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                onClick={() => setInfoDialogOpen(false)}
-                className="bg-blue-600 hover:bg-blue-700 w-full"
-              >
-                Got it!
               </Button>
             </DialogFooter>
           </DialogContent>

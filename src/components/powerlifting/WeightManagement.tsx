@@ -73,18 +73,45 @@ export default function WeightManagement() {
     const safeMeetDate = (() => {
       try {
         const meetDate = state.meetInfo.meetDate;
-        if (meetDate instanceof Date && !isNaN(meetDate.getTime())) {
-          return meetDate.toISOString().split("T")[0];
-        } else if (typeof meetDate === "string") {
+
+        // Handle null/undefined
+        if (!meetDate) {
+          return new Date().toISOString().split("T")[0];
+        }
+
+        // Handle Date object
+        if (meetDate instanceof Date) {
+          if (!isNaN(meetDate.getTime())) {
+            return meetDate.toISOString().split("T")[0];
+          } else {
+            return new Date().toISOString().split("T")[0];
+          }
+        }
+
+        // Handle string
+        if (typeof meetDate === "string") {
           const parsedDate = new Date(meetDate);
           if (!isNaN(parsedDate.getTime())) {
             return parsedDate.toISOString().split("T")[0];
           }
         }
-        // Fallback to current date
+
+        // Handle any other type - convert to string first, then parse
+        const stringDate = String(meetDate);
+        const parsedDate = new Date(stringDate);
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate.toISOString().split("T")[0];
+        }
+
+        // Final fallback
         return new Date().toISOString().split("T")[0];
       } catch (error) {
-        console.warn("Error parsing meet date:", error);
+        console.warn(
+          "Error parsing meet date:",
+          error,
+          "meetDate:",
+          state.meetInfo.meetDate,
+        );
         return new Date().toISOString().split("T")[0];
       }
     })();

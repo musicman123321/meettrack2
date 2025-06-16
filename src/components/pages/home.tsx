@@ -448,28 +448,6 @@ export default function Home() {
                     <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed mb-4">
                       {feature.description}
                     </CardDescription>
-                    {!user && (
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                          <span>Preview Available</span>
-                          <motion.div
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="w-2 h-2 bg-green-500 rounded-full"
-                          />
-                        </div>
-                        <Button
-                          size="sm"
-                          className="w-full bg-red-600 hover:bg-red-700 text-white text-xs py-1 h-7"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = "/signup";
-                          }}
-                        >
-                          Try {feature.title} →
-                        </Button>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </motion.div>

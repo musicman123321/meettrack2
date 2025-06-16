@@ -813,10 +813,179 @@ export default function PowerliftingDashboard({
         <motion.div variants={itemVariants} className="mb-4 md:mb-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
-                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-                Competition Readiness
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
+                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+                  Competition Readiness
+                </CardTitle>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-400 hover:text-white hover:bg-gray-700 p-2"
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-blue-500" />
+                        Competition Readiness Breakdown
+                      </DialogTitle>
+                      <DialogDescription className="text-gray-400">
+                        Understanding how your readiness score is calculated
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 text-sm max-h-96 overflow-y-auto">
+                      <div className="bg-gray-700/50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-blue-400 mb-3">
+                          Overall Formula
+                        </h4>
+                        <p className="text-gray-300 mb-2">
+                          Competition Readiness = (Lift Progress × 80%) +
+                          (Weight Progress × 15%) + (Equipment × 5%)
+                        </p>
+                        <p className="text-gray-300">
+                          Current Score:{" "}
+                          <span className="font-bold text-white">
+                            {competitionReadiness}%
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-700">
+                          <h5 className="font-semibold text-blue-400 mb-2">
+                            Lift Progress (80%)
+                          </h5>
+                          <p className="text-gray-300 text-xs mb-2">
+                            Progress toward your third attempt goals across all
+                            lifts
+                          </p>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-red-400">Squat:</span>
+                              <span>
+                                {Math.round(getProgressPercentage("squat"))}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-blue-400">Bench:</span>
+                              <span>
+                                {Math.round(getProgressPercentage("bench"))}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-green-400">Deadlift:</span>
+                              <span>
+                                {Math.round(getProgressPercentage("deadlift"))}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-green-900/30 p-3 rounded-lg border border-green-700">
+                          <h5 className="font-semibold text-green-400 mb-2">
+                            Weight Progress (15%)
+                          </h5>
+                          <p className="text-gray-300 text-xs mb-2">
+                            How close you are to your target weight class
+                          </p>
+                          <div className="text-xs">
+                            <p>
+                              Current: {formatWeight(state.currentStats.weight)}
+                            </p>
+                            <p>
+                              Target:{" "}
+                              {formatWeight(state.meetInfo.targetWeightClass)}
+                            </p>
+                            <p className="mt-1">
+                              Status:{" "}
+                              {state.currentStats.weight <=
+                              state.meetInfo.targetWeightClass ? (
+                                <span className="text-green-400">
+                                  ✓ On target
+                                </span>
+                              ) : (
+                                <span className="text-yellow-400">
+                                  ⚠ Need to cut{" "}
+                                  {(
+                                    state.currentStats.weight -
+                                    state.meetInfo.targetWeightClass
+                                  ).toFixed(1)}
+                                  kg
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="bg-purple-900/30 p-3 rounded-lg border border-purple-700">
+                          <h5 className="font-semibold text-purple-400 mb-2">
+                            Equipment (5%)
+                          </h5>
+                          <p className="text-gray-300 text-xs mb-2">
+                            Competition preparation checklist completion
+                          </p>
+                          <div className="text-xs">
+                            <p>
+                              Completed: {completedEquipment}/{totalEquipment}{" "}
+                              items
+                            </p>
+                            <p>Progress: {Math.round(equipmentProgress)}%</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-700/50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-yellow-400 mb-3">
+                          Individual Lift Calculations
+                        </h4>
+                        <div className="space-y-3 text-xs">
+                          <div>
+                            <p className="text-red-400 font-medium mb-1">
+                              Squat Progress:
+                            </p>
+                            <p className="text-gray-300">
+                              ({formatWeight(state.currentStats.squatMax)} ÷{" "}
+                              {formatWeight(state.meetGoals.squat.third)}) × 100
+                              = {Math.round(getProgressPercentage("squat"))}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-blue-400 font-medium mb-1">
+                              Bench Progress:
+                            </p>
+                            <p className="text-gray-300">
+                              ({formatWeight(state.currentStats.benchMax)} ÷{" "}
+                              {formatWeight(state.meetGoals.bench.third)}) × 100
+                              = {Math.round(getProgressPercentage("bench"))}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-green-400 font-medium mb-1">
+                              Deadlift Progress:
+                            </p>
+                            <p className="text-gray-300">
+                              ({formatWeight(state.currentStats.deadliftMax)} ÷{" "}
+                              {formatWeight(state.meetGoals.deadlift.third)}) ×
+                              100 ={" "}
+                              {Math.round(getProgressPercentage("deadlift"))}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button className="bg-blue-600 hover:bg-blue-700 w-full">
+                        Got it!
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
               <div className="space-y-6">
