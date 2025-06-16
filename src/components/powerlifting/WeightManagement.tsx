@@ -68,9 +68,30 @@ export default function WeightManagement() {
   // Update selected weight class when state changes
   useEffect(() => {
     setSelectedWeightClass(state.meetInfo.targetWeightClass.toString());
+
+    // Safe date handling to prevent toISOString error
+    const safeMeetDate = (() => {
+      try {
+        const meetDate = state.meetInfo.meetDate;
+        if (meetDate instanceof Date && !isNaN(meetDate.getTime())) {
+          return meetDate.toISOString().split("T")[0];
+        } else if (typeof meetDate === "string") {
+          const parsedDate = new Date(meetDate);
+          if (!isNaN(parsedDate.getTime())) {
+            return parsedDate.toISOString().split("T")[0];
+          }
+        }
+        // Fallback to current date
+        return new Date().toISOString().split("T")[0];
+      } catch (error) {
+        console.warn("Error parsing meet date:", error);
+        return new Date().toISOString().split("T")[0];
+      }
+    })();
+
     setMeetForm({
       meetName: state.meetInfo.meetName || "",
-      meetDate: state.meetInfo.meetDate.toISOString().split("T")[0],
+      meetDate: safeMeetDate,
       location: state.meetInfo.location || "",
       targetWeightClass: state.meetInfo.targetWeightClass,
     });

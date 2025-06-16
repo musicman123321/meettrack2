@@ -14,11 +14,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Edit } from "lucide-react";
+import { Edit, Info, HelpCircle } from "lucide-react";
 import AnimatedProgressBar from "./AnimatedProgressBar";
 import { usePowerlifting } from "../../contexts/PowerliftingContext";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LiftCardProps {
   lift: "squat" | "bench" | "deadlift";
@@ -42,6 +48,7 @@ export default function LiftCard({
   } = usePowerlifting();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     currentMax: "",
     opener: "",
@@ -109,208 +116,323 @@ export default function LiftCard({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogTrigger asChild>
-          <Card
-            className={cn(
-              "bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer",
-              bgColor,
-            )}
-            onClick={handleEditClick}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={cn("p-2 rounded-lg", color)}>{icon}</div>
-                  <CardTitle className="text-white">{liftName}</CardTitle>
+    <TooltipProvider>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogTrigger asChild>
+            <Card
+              className={cn(
+                "bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer",
+                bgColor,
+              )}
+              onClick={handleEditClick}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-lg", color)}>{icon}</div>
+                    <CardTitle className="text-white">{liftName}</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInfoDialogOpen(true);
+                          }}
+                          className="p-1 hover:bg-gray-700 rounded transition-colors"
+                        >
+                          <HelpCircle className="h-3 w-3 text-gray-500 hover:text-gray-300" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Click for progress explanation</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Edit className="h-4 w-4 text-gray-500" />
+                    <Badge
+                      variant="outline"
+                      className="text-gray-300 border-gray-600"
+                    >
+                      {formatWeight(currentMax)}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Edit className="h-4 w-4 text-gray-500" />
-                  <Badge
-                    variant="outline"
-                    className="text-gray-300 border-gray-600"
-                  >
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <AnimatedProgressBar
+                  progress={progress}
+                  label="Goal Progress"
+                  color={color}
+                  className="mb-4"
+                />
+
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="text-center p-2 bg-gray-700 rounded">
+                    <div className="text-gray-400">Opener</div>
+                    <div className="text-white font-semibold">
+                      {formatWeight(attempts.opener)}
+                    </div>
+                  </div>
+                  <div className="text-center p-2 bg-gray-700 rounded">
+                    <div className="text-gray-400">Second</div>
+                    <div className="text-white font-semibold">
+                      {formatWeight(attempts.second)}
+                    </div>
+                  </div>
+                  <div className="text-center p-2 bg-gray-700 rounded">
+                    <div className="text-gray-400">Third</div>
+                    <div className="text-white font-semibold">
+                      {formatWeight(attempts.third)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-gray-400 text-sm">Confidence</span>
+                  <div className="flex items-center gap-1">
+                    {[...Array(10)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          i < attempts.confidence ? color : "bg-gray-600",
+                        )}
+                      />
+                    ))}
+                    <span className="text-white text-sm ml-2">
+                      {attempts.confidence}/10
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-blue-400 text-center mt-2">
+                  Click to edit {liftName.toLowerCase()} data
+                </p>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+
+          <DialogContent className="bg-gray-800 border-gray-700 text-white">
+            <DialogHeader>
+              <DialogTitle>Edit {liftName} Data</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Update your current max and meet attempts for{" "}
+                {liftName.toLowerCase()}.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="currentMax" className="text-gray-300">
+                  Current Max (kg)
+                </Label>
+                <Input
+                  id="currentMax"
+                  type="number"
+                  value={editForm.currentMax}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      currentMax: e.target.value,
+                    }))
+                  }
+                  placeholder="Enter current max"
+                  className="bg-gray-700 border-gray-600 text-white mt-1"
+                  step="0.5"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="opener" className="text-gray-300">
+                    Opener (kg)
+                  </Label>
+                  <Input
+                    id="opener"
+                    type="number"
+                    value={editForm.opener}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        opener: e.target.value,
+                      }))
+                    }
+                    placeholder="Opener"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                    step="0.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="second" className="text-gray-300">
+                    Second (kg)
+                  </Label>
+                  <Input
+                    id="second"
+                    type="number"
+                    value={editForm.second}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        second: e.target.value,
+                      }))
+                    }
+                    placeholder="Second"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                    step="0.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="third" className="text-gray-300">
+                    Third (kg)
+                  </Label>
+                  <Input
+                    id="third"
+                    type="number"
+                    value={editForm.third}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        third: e.target.value,
+                      }))
+                    }
+                    placeholder="Third"
+                    className="bg-gray-700 border-gray-600 text-white mt-1"
+                    step="0.5"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="confidence" className="text-gray-300">
+                  Confidence (1-10)
+                </Label>
+                <Input
+                  id="confidence"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={editForm.confidence}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      confidence: e.target.value,
+                    }))
+                  }
+                  placeholder="Confidence level"
+                  className="bg-gray-700 border-gray-600 text-white mt-1"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Progress Explanation Dialog */}
+        <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-blue-500" />
+                {liftName} Progress Explanation
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 text-sm">
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <h4 className="font-semibold text-blue-400 mb-2">
+                  Current Status
+                </h4>
+                <p className="text-gray-300">
+                  Your current max:{" "}
+                  <span className="font-bold text-white">
                     {formatWeight(currentMax)}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <AnimatedProgressBar
-                progress={progress}
-                label="Goal Progress"
-                color={color}
-                className="mb-4"
-              />
-
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="text-center p-2 bg-gray-700 rounded">
-                  <div className="text-gray-400">Opener</div>
-                  <div className="text-white font-semibold">
-                    {formatWeight(attempts.opener)}
-                  </div>
-                </div>
-                <div className="text-center p-2 bg-gray-700 rounded">
-                  <div className="text-gray-400">Second</div>
-                  <div className="text-white font-semibold">
-                    {formatWeight(attempts.second)}
-                  </div>
-                </div>
-                <div className="text-center p-2 bg-gray-700 rounded">
-                  <div className="text-gray-400">Third</div>
-                  <div className="text-white font-semibold">
-                    {formatWeight(attempts.third)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-gray-400 text-sm">Confidence</span>
-                <div className="flex items-center gap-1">
-                  {[...Array(10)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "w-2 h-2 rounded-full",
-                        i < attempts.confidence ? color : "bg-gray-600",
-                      )}
-                    />
-                  ))}
-                  <span className="text-white text-sm ml-2">
-                    {attempts.confidence}/10
                   </span>
+                </p>
+                <p className="text-gray-300">
+                  Target (3rd attempt):{" "}
+                  <span className="font-bold text-white">
+                    {formatWeight(attempts.third)}
+                  </span>
+                </p>
+              </div>
+
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <h4 className="font-semibold text-green-400 mb-2">
+                  Progress Calculation
+                </h4>
+                <p className="text-gray-300 mb-2">
+                  Progress = (Current Max ÷ Target) × 100
+                </p>
+                <p className="text-gray-300">
+                  {Math.round(progress)}% = ({formatWeight(currentMax)} ÷{" "}
+                  {formatWeight(attempts.third)}) × 100
+                </p>
+              </div>
+
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <h4 className="font-semibold text-purple-400 mb-2">
+                  Meet Attempts
+                </h4>
+                <div className="space-y-1 text-xs">
+                  <p>
+                    <span className="text-gray-400">Opener (safe):</span>{" "}
+                    <span className="text-white">
+                      {formatWeight(attempts.opener)}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Second (realistic):</span>{" "}
+                    <span className="text-white">
+                      {formatWeight(attempts.second)}
+                    </span>
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Third (goal):</span>{" "}
+                    <span className="text-white">
+                      {formatWeight(attempts.third)}
+                    </span>
+                  </p>
                 </div>
               </div>
 
-              <p className="text-xs text-blue-400 text-center mt-2">
-                Click to edit {liftName.toLowerCase()} data
-              </p>
-            </CardContent>
-          </Card>
-        </DialogTrigger>
-
-        <DialogContent className="bg-gray-800 border-gray-700 text-white">
-          <DialogHeader>
-            <DialogTitle>Edit {liftName} Data</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Update your current max and meet attempts for{" "}
-              {liftName.toLowerCase()}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="currentMax" className="text-gray-300">
-                Current Max (kg)
-              </Label>
-              <Input
-                id="currentMax"
-                type="number"
-                value={editForm.currentMax}
-                onChange={(e) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    currentMax: e.target.value,
-                  }))
-                }
-                placeholder="Enter current max"
-                className="bg-gray-700 border-gray-600 text-white mt-1"
-                step="0.5"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor="opener" className="text-gray-300">
-                  Opener (kg)
-                </Label>
-                <Input
-                  id="opener"
-                  type="number"
-                  value={editForm.opener}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, opener: e.target.value }))
-                  }
-                  placeholder="Opener"
-                  className="bg-gray-700 border-gray-600 text-white mt-1"
-                  step="0.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="second" className="text-gray-300">
-                  Second (kg)
-                </Label>
-                <Input
-                  id="second"
-                  type="number"
-                  value={editForm.second}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, second: e.target.value }))
-                  }
-                  placeholder="Second"
-                  className="bg-gray-700 border-gray-600 text-white mt-1"
-                  step="0.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="third" className="text-gray-300">
-                  Third (kg)
-                </Label>
-                <Input
-                  id="third"
-                  type="number"
-                  value={editForm.third}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, third: e.target.value }))
-                  }
-                  placeholder="Third"
-                  className="bg-gray-700 border-gray-600 text-white mt-1"
-                  step="0.5"
-                />
+              <div className="bg-gray-700/50 p-3 rounded-lg">
+                <h4 className="font-semibold text-yellow-400 mb-2">
+                  Confidence Level
+                </h4>
+                <p className="text-gray-300">
+                  {attempts.confidence}/10 - How confident you feel about
+                  hitting your third attempt
+                </p>
               </div>
             </div>
-            <div>
-              <Label htmlFor="confidence" className="text-gray-300">
-                Confidence (1-10)
-              </Label>
-              <Input
-                id="confidence"
-                type="number"
-                min="1"
-                max="10"
-                value={editForm.confidence}
-                onChange={(e) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    confidence: e.target.value,
-                  }))
-                }
-                placeholder="Confidence level"
-                className="bg-gray-700 border-gray-600 text-white mt-1"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditDialogOpen(false)}
-              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </motion.div>
+            <DialogFooter>
+              <Button
+                onClick={() => setInfoDialogOpen(false)}
+                className="bg-blue-600 hover:bg-blue-700 w-full"
+              >
+                Got it!
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </motion.div>
+    </TooltipProvider>
   );
 }

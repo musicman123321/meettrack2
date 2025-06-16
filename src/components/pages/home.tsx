@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 import TrainingProgressBar from "@/components/powerlifting/TrainingProgressBar";
 import {
   Card,
@@ -420,22 +421,58 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
-              <Card
+              <motion.div
                 key={index}
-                className="bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md h-full"
+                whileHover={{ scale: 1.02, y: -5 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
               >
-                <CardHeader className="pb-4">
-                  <div className="mb-4">{feature.icon}</div>
-                  <CardTitle className="text-gray-900 text-lg sm:text-xl">
-                    {feature.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
+                <Card
+                  className={`bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-lg h-full group ${
+                    !user ? "cursor-pointer" : ""
+                  }`}
+                  onClick={
+                    !user ? () => (window.location.href = "/signup") : undefined
+                  }
+                >
+                  <CardHeader className="pb-4">
+                    <div className="mb-4 transform group-hover:scale-110 transition-transform duration-200">
+                      {feature.icon}
+                    </div>
+                    <CardTitle className="text-gray-900 text-lg sm:text-xl group-hover:text-red-600 transition-colors">
+                      {feature.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed mb-4">
+                      {feature.description}
+                    </CardDescription>
+                    {!user && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                          <span>Preview Available</span>
+                          <motion.div
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="w-2 h-2 bg-green-500 rounded-full"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full bg-red-600 hover:bg-red-700 text-white text-xs py-1 h-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = "/signup";
+                          }}
+                        >
+                          Try {feature.title} →
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         </div>

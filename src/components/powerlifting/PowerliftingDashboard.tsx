@@ -29,6 +29,7 @@ import {
   CalendarDays,
   List,
   Trash2,
+  HelpCircle,
 } from "lucide-react";
 import { usePowerlifting } from "../../contexts/PowerliftingContext";
 import LiftCard from "./LiftCard";
@@ -687,33 +688,100 @@ export default function PowerliftingDashboard({
             </CardContent>
           </Card>
 
-          <Card
-            className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target"
-            onClick={() => onNavigate?.("equipment")}
-          >
-            <CardHeader className="pb-2 p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
-                  Equipment Ready
-                </CardTitle>
-                <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500 flex-shrink-0" />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target relative group">
+                <CardHeader className="pb-2 p-3 sm:p-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
+                      Equipment Ready
+                    </CardTitle>
+                    <div className="flex items-center gap-1">
+                      <HelpCircle className="h-3 w-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500 flex-shrink-0" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <div className="text-xl sm:text-2xl font-bold text-white">
+                    {completedEquipment}/{totalEquipment}
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                    <div
+                      className="bg-purple-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${equipmentProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-blue-400 mt-1 hidden sm:block">
+                    Click for details
+                  </p>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CheckSquare className="h-5 w-5 text-purple-500" />
+                  Equipment Readiness
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 text-sm">
+                <div className="bg-gray-700/50 p-3 rounded-lg">
+                  <h4 className="font-semibold text-purple-400 mb-2">
+                    Current Status
+                  </h4>
+                  <p className="text-gray-300">
+                    You have completed{" "}
+                    <span className="font-bold text-white">
+                      {completedEquipment} out of {totalEquipment}
+                    </span>{" "}
+                    equipment items.
+                  </p>
+                  <p className="text-gray-300 mt-1">
+                    Progress:{" "}
+                    <span className="font-bold text-white">
+                      {Math.round(equipmentProgress)}%
+                    </span>
+                  </p>
+                </div>
+
+                <div className="bg-gray-700/50 p-3 rounded-lg">
+                  <h4 className="font-semibold text-blue-400 mb-2">
+                    What This Means
+                  </h4>
+                  <p className="text-gray-300 mb-2">
+                    This tracks your preparation checklist for competition day,
+                    including:
+                  </p>
+                  <ul className="text-xs text-gray-400 space-y-1 ml-4">
+                    <li>• Competition gear (singlet, shoes, belt)</li>
+                    <li>• Required documents and registration</li>
+                    <li>• Nutrition and recovery items</li>
+                    <li>• Meet day essentials</li>
+                  </ul>
+                </div>
+
+                <div className="bg-gray-700/50 p-3 rounded-lg">
+                  <h4 className="font-semibold text-green-400 mb-2">
+                    Impact on Readiness
+                  </h4>
+                  <p className="text-gray-300">
+                    Equipment preparation contributes{" "}
+                    <span className="font-bold text-white">5%</span> to your
+                    overall competition readiness score.
+                  </p>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
-              <div className="text-xl sm:text-2xl font-bold text-white">
-                {completedEquipment}/{totalEquipment}
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                <div
-                  className="bg-purple-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${equipmentProgress}%` }}
-                />
-              </div>
-              <p className="text-xs text-blue-400 mt-1 hidden sm:block">
-                Click to view checklist
-              </p>
-            </CardContent>
-          </Card>
+              <DialogFooter>
+                <Button
+                  onClick={() => onNavigate?.("equipment")}
+                  className="bg-purple-600 hover:bg-purple-700 flex-1"
+                >
+                  View Full Checklist
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </motion.div>
 
         {/* Lift Cards */}
