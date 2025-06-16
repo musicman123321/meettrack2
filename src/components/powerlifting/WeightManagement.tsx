@@ -68,9 +68,27 @@ export default function WeightManagement() {
   // Update selected weight class when state changes
   useEffect(() => {
     setSelectedWeightClass(state.meetInfo.targetWeightClass.toString());
+
+    // Ensure meetDate is a valid Date object before calling toISOString
+    let meetDateString = new Date().toISOString().split("T")[0]; // Default to today
+    if (state.meetInfo.meetDate) {
+      try {
+        const meetDate =
+          state.meetInfo.meetDate instanceof Date
+            ? state.meetInfo.meetDate
+            : new Date(state.meetInfo.meetDate);
+
+        if (!isNaN(meetDate.getTime())) {
+          meetDateString = meetDate.toISOString().split("T")[0];
+        }
+      } catch (error) {
+        console.warn("Invalid meetDate format:", state.meetInfo.meetDate);
+      }
+    }
+
     setMeetForm({
       meetName: state.meetInfo.meetName || "",
-      meetDate: state.meetInfo.meetDate.toISOString().split("T")[0],
+      meetDate: meetDateString,
       location: state.meetInfo.location || "",
       targetWeightClass: state.meetInfo.targetWeightClass,
     });
