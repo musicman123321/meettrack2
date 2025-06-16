@@ -58,71 +58,54 @@ export default function WeightManagement() {
 
   // Meet details modal state
   const [meetDetailsOpen, setMeetDetailsOpen] = useState(false);
-  const [meetForm, setMeetForm] = useState({
+const [meetForm, setMeetForm] = useState({
+  meetName: state.meetInfo.meetName || "",
+  meetDate: 
+    state.meetInfo.meetDate instanceof Date 
+      ? state.meetInfo.meetDate.toISOString().split("T")[0] 
+      : typeof state.meetInfo.meetDate === "string"
+        ? new Date(state.meetInfo.meetDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+  location: state.meetInfo.location || "",
+  targetWeightClass: state.meetInfo.targetWeightClass,
+});
+
+  // Update selected weight class when state changes
+useEffect(() => {
+  setSelectedWeightClass(state.meetInfo.targetWeightClass.toString());
+
+  const safeMeetDate = (() => {
+    const meetDate = state.meetInfo.meetDate;
+    
+    // Handle null/undefined
+    if (!meetDate) {
+      return new Date().toISOString().split("T")[0];
+    }
+
+    // Handle Date object
+    if (meetDate instanceof Date) {
+      return meetDate.toISOString().split("T")[0];
+    }
+
+    // Handle string
+    if (typeof meetDate === "string") {
+      const parsedDate = new Date(meetDate);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().split("T")[0];
+      }
+    }
+
+    // Fallback to current date
+    return new Date().toISOString().split("T")[0];
+  })();
+
+  setMeetForm({
     meetName: state.meetInfo.meetName || "",
-    meetDate: state.meetInfo.meetDate.toISOString().split("T")[0],
+    meetDate: safeMeetDate,
     location: state.meetInfo.location || "",
     targetWeightClass: state.meetInfo.targetWeightClass,
   });
-
-  // Update selected weight class when state changes
-  useEffect(() => {
-    setSelectedWeightClass(state.meetInfo.targetWeightClass.toString());
-
-    // Safe date handling to prevent toISOString error
-    const safeMeetDate = (() => {
-      try {
-        const meetDate = state.meetInfo.meetDate;
-
-        // Handle null/undefined
-        if (!meetDate) {
-          return new Date().toISOString().split("T")[0];
-        }
-
-        // Handle Date object
-        if (meetDate instanceof Date) {
-          if (!isNaN(meetDate.getTime())) {
-            return meetDate.toISOString().split("T")[0];
-          } else {
-            return new Date().toISOString().split("T")[0];
-          }
-        }
-
-        // Handle string
-        if (typeof meetDate === "string") {
-          const parsedDate = new Date(meetDate);
-          if (!isNaN(parsedDate.getTime())) {
-            return parsedDate.toISOString().split("T")[0];
-          }
-        }
-
-        // Handle any other type - convert to string first, then parse
-        const stringDate = String(meetDate);
-        const parsedDate = new Date(stringDate);
-        if (!isNaN(parsedDate.getTime())) {
-          return parsedDate.toISOString().split("T")[0];
-        }
-
-        // Final fallback
-        return new Date().toISOString().split("T")[0];
-      } catch (error) {
-        console.warn(
-          "Error parsing meet date:",
-          error,
-          "meetDate:",
-          state.meetInfo.meetDate,
-        );
-        return new Date().toISOString().split("T")[0];
-      }
-    })();
-
-    setMeetForm({
-      meetName: state.meetInfo.meetName || "",
-      meetDate: safeMeetDate,
-      location: state.meetInfo.location || "",
-      targetWeightClass: state.meetInfo.targetWeightClass,
-    });
-  }, [state.meetInfo]);
+}, [state.meetInfo]);
 
   if (loading) {
     return (
@@ -334,32 +317,37 @@ export default function WeightManagement() {
     setTempTargetClass("");
   };
 
-  // Handle meet details form
-  const handleMeetDetailsSubmit = async () => {
-    setSaving(true);
-    try {
-      const updatedMeetInfo = {
-        meetName: meetForm.meetName,
-        meetDate: new Date(meetForm.meetDate),
-        location: meetForm.location,
-        targetWeightClass: meetForm.targetWeightClass,
-      };
-      await saveMeetInfo(updatedMeetInfo);
-      setMeetDetailsOpen(false);
-      toast({
-        title: "Meet details updated!",
-        description: "Your competition information has been saved.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error updating meet details",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+const handleMeetDetailsSubmit = async () => {
+  setSaving(true);
+  try {
+    // Ensure meetDate is properly converted to a Date object
+    const meetDate = meetForm.meetDate 
+      ? new Date(meetForm.meetDate)
+      : new Date();
+
+    const updatedMeetInfo = {
+      meetName: meetForm.meetName,
+      meetDate: meetDate,
+      location: meetForm.location,
+      targetWeightClass: meetForm.targetWeightClass,
+    };
+    
+    await saveMeetInfo(updatedMeetInfo);
+    setMeetDetailsOpen(false);
+    toast({
+      title: "Meet details updated!",
+      description: "Your competition information has been saved.",
+    });
+  } catch (error) {
+    toast({
+      title: "Error updating meet details",
+      description: "Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-6">

@@ -56,6 +56,7 @@ export default function PowerliftingDashboard({
     getAllMeets,
     setActiveMeet,
     deleteMeet,
+    getProgressPercentage
   } = usePowerlifting();
 
   const [quickWeightOpen, setQuickWeightOpen] = useState(false);
