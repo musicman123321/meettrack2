@@ -30,7 +30,7 @@ import { useAuth } from "../../../supabase/auth";
 import { supabase } from "../../../supabase/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { analytics } from "@/utils/analytics";
-
+import { motion } from "framer-motion";
 // Support Donation Component
 function SupportDonation() {
   const { user } = useAuth();
