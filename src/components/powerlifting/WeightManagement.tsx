@@ -73,11 +73,18 @@ export default function WeightManagement() {
     let meetDateString = new Date().toISOString().split("T")[0]; // Default to today
     if (state.meetInfo.meetDate) {
       try {
-        const meetDate =
-          state.meetInfo.meetDate instanceof Date
-            ? state.meetInfo.meetDate
-            : new Date(state.meetInfo.meetDate);
+        // Handle both Date objects and string dates
+        let meetDate;
+        if (state.meetInfo.meetDate instanceof Date) {
+          meetDate = state.meetInfo.meetDate;
+        } else if (typeof state.meetInfo.meetDate === "string") {
+          meetDate = new Date(state.meetInfo.meetDate);
+        } else {
+          // If it's neither Date nor string, create a new Date
+          meetDate = new Date();
+        }
 
+        // Check if the date is valid
         if (!isNaN(meetDate.getTime())) {
           meetDateString = meetDate.toISOString().split("T")[0];
         }

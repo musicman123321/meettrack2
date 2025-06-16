@@ -294,36 +294,72 @@ const features = [
     title: "Lift Tracking",
     description:
       "Track your squat, bench press, and deadlift progress with detailed attempt planning and confidence tracking.",
+    previewData: {
+      squat: "185kg",
+      bench: "125kg",
+      deadlift: "220kg",
+      confidence: "85%",
+    },
   },
   {
     icon: <Scale className="h-8 w-8 text-blue-500" />,
     title: "Weight Management",
     description:
       "Monitor your weight cutting progress and ensure you make your target weight class on competition day.",
+    previewData: {
+      current: "82.5kg",
+      target: "83kg",
+      days: "42",
+      status: "On Track",
+    },
   },
   {
     icon: <CheckSquare className="h-8 w-8 text-green-500" />,
     title: "Equipment Checklist",
     description:
       "Never forget essential gear with our comprehensive equipment and preparation checklists.",
+    previewData: {
+      completed: "8",
+      total: "12",
+      percentage: "67%",
+      nextItem: "Knee Sleeves",
+    },
   },
   {
     icon: <BarChart3 className="h-8 w-8 text-purple-500" />,
     title: "Analytics & Insights",
     description:
       "Calculate Wilks scores, analyze lift distribution, and track your strength progression over time.",
+    previewData: {
+      wilks: "342",
+      total: "530kg",
+      trend: "+15kg",
+      rank: "Advanced",
+    },
   },
   {
     icon: <Calendar className="h-8 w-8 text-orange-500" />,
     title: "Meet Countdown",
     description:
       "Stay on track with countdown timers and preparation milestones leading up to competition day.",
+    previewData: {
+      days: "42",
+      meet: "Spring Classic",
+      location: "Local Gym",
+      ready: "78%",
+    },
   },
   {
     icon: <Trophy className="h-8 w-8 text-yellow-500" />,
     title: "Goal Setting",
     description:
       "Set realistic meet goals and track your progress with visual indicators and confidence metrics.",
+    previewData: {
+      goal: "550kg",
+      current: "530kg",
+      progress: "96%",
+      timeLeft: "6 weeks",
+    },
   },
 ];
 
@@ -581,6 +617,19 @@ export default function Home() {
               Comprehensive tools designed specifically for powerlifting
               competition preparation
             </p>
+            {!user && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-6"
+              >
+                <Badge className="bg-red-100 text-red-800 border-red-200 text-sm px-4 py-2">
+                  👆 Hover over cards to see dashboard previews - Click to sign
+                  up!
+                </Badge>
+              </motion.div>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
@@ -589,26 +638,113 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={user ? "" : "cursor-pointer"}
+                onClick={user ? undefined : handleSignUpClick}
               >
-                <Card className="bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md h-full group">
-                  <CardHeader className="pb-4">
-                    <div className="mb-4 group-hover:scale-110 transition-transform duration-300">
+                <Card className="bg-white border-gray-200 hover:border-red-300 transition-all duration-500 shadow-sm hover:shadow-xl h-full group relative overflow-hidden">
+                  {/* Animated background gradient on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-50 to-orange-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                  <CardHeader className="pb-4 relative z-10">
+                    <div className="mb-4 group-hover:scale-125 transition-all duration-500 group-hover:rotate-12">
                       {feature.icon}
                     </div>
-                    <CardTitle className="text-gray-900 text-lg sm:text-xl group-hover:text-red-600 transition-colors">
+                    <CardTitle className="text-gray-900 text-lg sm:text-xl group-hover:text-red-600 transition-colors duration-300">
                       {feature.title}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                  <CardContent className="relative z-10">
+                    <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed mb-4">
                       {feature.description}
                     </CardDescription>
+
+                    {/* Dashboard Preview Data - Only show for non-logged in users */}
+                    {!user && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        whileHover={{ opacity: 1, height: "auto" }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                        className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 group-hover:border-red-200 group-hover:bg-red-50 transition-all duration-300"
+                      >
+                        <div className="text-xs font-semibold text-gray-500 mb-2 group-hover:text-red-600 transition-colors">
+                          📊 Dashboard Preview:
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {Object.entries(feature.previewData).map(
+                            ([key, value]) => (
+                              <motion.div
+                                key={key}
+                                initial={{ opacity: 0, x: -10 }}
+                                whileHover={{ opacity: 1, x: 0 }}
+                                transition={{
+                                  duration: 0.2,
+                                  delay: Math.random() * 0.3,
+                                }}
+                                className="flex justify-between bg-white rounded px-2 py-1 group-hover:bg-red-100 transition-colors duration-300"
+                              >
+                                <span className="text-gray-600 capitalize group-hover:text-red-700 transition-colors">
+                                  {key}:
+                                </span>
+                                <span className="font-semibold text-gray-900 group-hover:text-red-800 transition-colors">
+                                  {value}
+                                </span>
+                              </motion.div>
+                            ),
+                          )}
+                        </div>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          whileHover={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.4 }}
+                          className="mt-3 text-center"
+                        >
+                          <div className="text-xs font-medium text-red-600 flex items-center justify-center gap-1">
+                            🚀 Click to start tracking!
+                            <ArrowRight className="h-3 w-3" />
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+
+                    {/* Pulsing border animation for non-logged in users */}
+                    {!user && (
+                      <div className="absolute inset-0 rounded-lg border-2 border-red-400 opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-300" />
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
+
+          {/* Call to action after features for non-logged in users */}
+          {!user && (
+            <motion.div
+              className="text-center mt-12"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link to="/signup">
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold"
+                  >
+                    🎯 Ready to Start? Sign Up Free!
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              </motion.div>
+              <p className="text-sm text-gray-500 mt-4">
+                Join thousands of powerlifters already using Meet Prep Tracker
+              </p>
+            </motion.div>
+          )}
         </div>
       </section>
       {/* Testimonials Section
