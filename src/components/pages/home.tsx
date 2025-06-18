@@ -370,18 +370,15 @@ export default function Home() {
           </p>
           <div className="flex flex-col gap-6 justify-center items-center">
             {user ? (
-              <>
-                <Link to="/dashboard">
-                  <Button
-                    size="lg"
-                    className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
-                  >
-                    Open Dashboard
-                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
-                </Link>
-                <TrainingProgressBar className="mt-4" />
-              </>
+              <Link to="/dashboard">
+                <Button
+                  size="lg"
+                  className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
+                >
+                  Open Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                </Button>
+              </Link>
             ) : (
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link to="/signup" className="w-full sm:w-auto">
@@ -418,6 +415,12 @@ export default function Home() {
               Comprehensive tools designed specifically for powerlifting
               competition preparation
             </p>
+            {!user && (
+              <p className="text-base text-gray-500 mt-4 max-w-xl mx-auto">
+                Get a preview of what your dashboard will look like. Click any
+                card to start your journey!
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
