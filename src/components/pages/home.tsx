@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 import TrainingProgressBar from "@/components/powerlifting/TrainingProgressBar";
 import {
   Card,
@@ -30,7 +31,7 @@ import { useAuth } from "../../../supabase/auth";
 import { supabase } from "../../../supabase/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { analytics } from "@/utils/analytics";
-import { motion } from "framer-motion";
+
 // Support Donation Component
 function SupportDonation() {
   const { user } = useAuth();
@@ -227,67 +228,6 @@ function SupportDonation() {
   );
 }
 
-// Interactive Dashboard Preview Cards
-const DashboardPreviewCard = ({
-  title,
-  value,
-  subtitle,
-  icon,
-  color,
-  onClick,
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  color: string;
-  onClick: () => void;
-}) => {
-  return (
-    <motion.div
-      whileHover={{
-        scale: 1.05,
-        boxShadow:
-          "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-        y: -5,
-      }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="cursor-pointer"
-      onClick={onClick}
-    >
-      <Card className="bg-white border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 h-full group">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-gray-800 transition-colors">
-              {title}
-            </CardTitle>
-            <div
-              className={`p-2 rounded-lg ${color} group-hover:scale-110 transition-transform`}
-            >
-              {icon}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-gray-900 mb-1 group-hover:text-red-600 transition-colors">
-            {value}
-          </div>
-          <p className="text-sm text-gray-500 group-hover:text-gray-700 transition-colors">
-            {subtitle}
-          </p>
-          <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="text-xs text-red-600 font-medium flex items-center gap-1">
-              Click to sign up and start tracking
-              <ArrowRight className="h-3 w-3" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-};
-
 const features = [
   {
     icon: <Target className="h-8 w-8 text-red-500" />,
@@ -353,10 +293,6 @@ const testimonials = [
 
 export default function Home() {
   const { user } = useAuth();
-
-  const handleSignUpClick = () => {
-    window.location.href = "/signup";
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 text-gray-900">
@@ -444,129 +380,30 @@ export default function Home() {
                 </Button>
               </Link>
             ) : (
-              <div className="flex flex-col gap-6 justify-center items-center w-full max-w-md">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-full"
-                >
-                  <Link to="/signup" className="w-full">
-                    <Button
-                      size="lg"
-                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-lg px-8 py-4 w-full shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold"
-                    >
-                      🚀 Start Your Journey - Sign Up Free
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                </motion.div>
-                <p className="text-sm text-gray-500 text-center">
-                  Already have an account?{" "}
-                  <Link
-                    to="/login"
-                    className="text-red-600 hover:text-red-700 font-medium underline"
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link to="/signup" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
                   >
-                    Sign in here
-                  </Link>
-                </p>
+                    Sign Up
+                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  </Button>
+                </Link>
+                <Link to="/login" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-gray-300 hover:bg-gray-50 text-gray-700 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
+                  >
+                    Sign In
+                  </Button>
+                </Link>
               </div>
             )}
           </div>
         </div>
       </section>
-      {/* Interactive Dashboard Preview */}
-      <section className="py-12 sm:py-20 px-4 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">
-              See Your Progress at a Glance
-            </h2>
-            <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-6">
-              Get a preview of what your dashboard will look like. Click any
-              card to start your journey!
-            </p>
-            {!user && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Badge className="bg-red-100 text-red-800 border-red-200 text-sm px-4 py-2 mb-8">
-                  👆 Interactive Preview - Click to Sign Up!
-                </Badge>
-              </motion.div>
-            )}
-          </div>
-
-          <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ staggerChildren: 0.1 }}
-          >
-            <DashboardPreviewCard
-              title="Days Until Meet"
-              value="42"
-              subtitle="Spring Classic 2024"
-              icon={<Calendar className="h-5 w-5 text-white" />}
-              color="bg-red-500"
-              onClick={handleSignUpClick}
-            />
-            <DashboardPreviewCard
-              title="Current Total"
-              value="485kg"
-              subtitle="Wilks: 342"
-              icon={<Dumbbell className="h-5 w-5 text-white" />}
-              color="bg-blue-500"
-              onClick={handleSignUpClick}
-            />
-            <DashboardPreviewCard
-              title="Body Weight"
-              value="82.5kg"
-              subtitle="Target: 83kg class"
-              icon={<Scale className="h-5 w-5 text-white" />}
-              color="bg-green-500"
-              onClick={handleSignUpClick}
-            />
-            <DashboardPreviewCard
-              title="Equipment Ready"
-              value="8/12"
-              subtitle="67% Complete"
-              icon={<CheckSquare className="h-5 w-5 text-white" />}
-              color="bg-purple-500"
-              onClick={handleSignUpClick}
-            />
-          </motion.div>
-
-          {!user && (
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link to="/signup">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold"
-                  >
-                    🎯 Create Your Dashboard Now - Free!
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-              </motion.div>
-              <p className="text-sm text-gray-500 mt-4">
-                Join thousands of powerlifters already using Meet Prep Tracker
-              </p>
-            </motion.div>
-          )}
-        </div>
-      </section>
-
       {/* Features Section */}
       <section className="py-12 sm:py-20 px-4 bg-white">
         <div className="container mx-auto">
@@ -589,14 +426,21 @@ export default function Home() {
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
+                whileHover={{ scale: 1.02, y: -5 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
               >
-                <Card className="bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md h-full group">
+                <Card
+                  className={`bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-lg h-full group ${
+                    !user ? "cursor-pointer" : ""
+                  }`}
+                  onClick={
+                    !user ? () => (window.location.href = "/signup") : undefined
+                  }
+                >
                   <CardHeader className="pb-4">
-                    <div className="mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <div className="mb-4 transform group-hover:scale-110 transition-transform duration-200">
                       {feature.icon}
                     </div>
                     <CardTitle className="text-gray-900 text-lg sm:text-xl group-hover:text-red-600 transition-colors">
@@ -604,7 +448,7 @@ export default function Home() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                    <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed mb-4">
                       {feature.description}
                     </CardDescription>
                   </CardContent>
@@ -684,111 +528,36 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-12 sm:py-20 px-4 bg-gradient-to-r from-red-600 to-orange-600 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 opacity-10">
-          <motion.div
-            className="absolute top-10 left-10 w-20 h-20 bg-white rounded-full"
-            animate={{
-              y: [0, -20, 0],
-              x: [0, 10, 0],
-            }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-          <motion.div
-            className="absolute top-32 right-20 w-16 h-16 bg-white rounded-full"
-            animate={{
-              y: [0, 15, 0],
-              x: [0, -15, 0],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1,
-            }}
-          />
-          <motion.div
-            className="absolute bottom-20 left-1/4 w-12 h-12 bg-white rounded-full"
-            animate={{
-              y: [0, -10, 0],
-              x: [0, 20, 0],
-            }}
-            transition={{
-              duration: 7,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 2,
-            }}
-          />
-        </div>
-
-        <div className="container mx-auto text-center relative z-10">
-          <motion.h2
-            className="text-3xl sm:text-4xl font-bold mb-6 text-white leading-tight"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
+      <section className="py-12 sm:py-20 px-4 bg-gradient-to-r from-red-600 to-orange-600">
+        <div className="container mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-white leading-tight">
             Ready to Dominate Your Next Meet?
-          </motion.h2>
-          <motion.p
-            className="text-lg sm:text-xl text-red-100 mb-8 max-w-2xl mx-auto leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
+          </h2>
+          <p className="text-lg sm:text-xl text-red-100 mb-8 max-w-2xl mx-auto leading-relaxed">
             Join thousands of powerlifters who trust Meet Prep Tracker for their
             competition preparation.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            {user ? (
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+          </p>
+          {user ? (
+            <Link to="/dashboard" className="inline-block">
+              <Button
+                size="lg"
+                className="bg-white text-red-600 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold"
               >
-                <Link to="/dashboard" className="inline-block">
-                  <Button
-                    size="lg"
-                    className="bg-white text-red-600 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold shadow-xl hover:shadow-2xl transition-all duration-300"
-                  >
-                    Go to Dashboard
-                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
-                </Link>
-              </motion.div>
-            ) : (
-              <div className="space-y-4">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link to="/signup" className="inline-block">
-                    <Button
-                      size="lg"
-                      className="bg-white text-red-600 hover:bg-gray-100 text-lg px-8 py-4 font-bold shadow-xl hover:shadow-2xl transition-all duration-300"
-                    >
-                      🏆 Start Your Meet Prep Journey
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
-                </motion.div>
-                <p className="text-red-100 text-sm">
-                  ✅ Free forever • ✅ No credit card required • ✅ Setup in 2
-                  minutes
-                </p>
-              </div>
-            )}
-          </motion.div>
+                Go to Dashboard
+                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/signup" className="inline-block">
+              <Button
+                size="lg"
+                className="bg-white text-red-600 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold"
+              >
+                Sign Up
+                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+              </Button>
+            </Link>
+          )}
         </div>
       </section>
       {/* Footer */}
