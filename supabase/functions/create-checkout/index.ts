@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Polar } from "npm:@polar-sh/sdk";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Polar } from "https://esm.sh/@polar-sh/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,8 +10,10 @@ const corsHeaders = {
 };
 
 const polar = new Polar({
-  accessToken: Deno.env.get("POLAR_ACCESS_TOKEN"),
-  server: "sandbox",
+  accessToken: Deno.env.get("POLAR_ACCESS_TOKEN") || "",
+  // Use environment variable for flexibility
+  server:
+    Deno.env.get("POLAR_ENVIRONMENT") === "sandbox" ? "sandbox" : "production",
 });
 
 serve(async (req) => {
@@ -26,18 +28,21 @@ serve(async (req) => {
     const { productPriceId, successUrl, customerEmail, metadata } =
       await req.json();
 
-    if (!productPriceId || !successUrl || !customerEmail || !metadata) {
+    if (!productPriceId || !successUrl || !customerEmail) {
       throw new Error("Missing required parameters");
     }
 
-    const result = await polar.checkouts.create({
-      productPriceId,
-      successUrl,
-      customerEmail,
-      metadata,
-    });
+    // Create checkout with proper Polar API structure
+    const checkoutData = {
+      product_price_id: productPriceId, // Note the underscore format
+      success_url: successUrl,
+      customer_email: customerEmail,
+      ...(metadata && { metadata }),
+    };
 
-    console.log("result", result);
+    const result = await polar.checkouts.create(checkoutData);
+
+    console.log("Polar checkout result:", result);
 
     return new Response(
       JSON.stringify({ sessionId: result.id, url: result.url }),
@@ -48,7 +53,9 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error creating checkout session:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
