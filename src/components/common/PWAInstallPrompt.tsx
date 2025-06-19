@@ -3,6 +3,7 @@ import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../../supabase/auth";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -10,12 +11,26 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const PWAInstallPrompt: React.FC = () => {
+  const { user } = useAuth();
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Check if device is mobile
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const isMobileDevice =
+        /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(
+          userAgent,
+        );
+      setIsMobile(isMobileDevice);
+    };
+
+    checkMobile();
+
     // Check if app is already installed
     const isStandalone = window.matchMedia(
       "(display-mode: standalone)",
@@ -32,10 +47,12 @@ const PWAInstallPrompt: React.FC = () => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
 
-      // Show prompt after a delay to not be intrusive
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 10000); // Show after 10 seconds
+      // Only show prompt for logged-in mobile users after a delay
+      if (user && isMobile) {
+        setTimeout(() => {
+          setShowPrompt(true);
+        }, 5000); // Show after 5 seconds for mobile users
+      }
     };
 
     // Listen for app installed event
@@ -55,7 +72,7 @@ const PWAInstallPrompt: React.FC = () => {
       );
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, []);
+  }, [user, isMobile]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -83,8 +100,13 @@ const PWAInstallPrompt: React.FC = () => {
     sessionStorage.setItem("pwa-prompt-dismissed", "true");
   };
 
-  // Don't show if already installed or dismissed this session
-  if (isInstalled || sessionStorage.getItem("pwa-prompt-dismissed")) {
+  // Don't show if not logged in, not mobile, already installed, or dismissed this session
+  if (
+    !user ||
+    !isMobile ||
+    isInstalled ||
+    sessionStorage.getItem("pwa-prompt-dismissed")
+  ) {
     return null;
   }
 
