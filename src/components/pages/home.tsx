@@ -43,49 +43,35 @@ function SupportDonation() {
   const donationAmounts = [5, 10, 25, 50];
 
   const handleDonation = async (amount: number) => {
-    // Track donation click
-    analytics.trackDonationClick(amount);
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "create-checkout",
-        {
-          body: {
-            productPriceId: "donation", // This would need to be configured in Polar.sh
-            successUrl: `${window.location.origin}/success?type=donation&amount=${amount}`,
-            customerEmail: user?.email || "anonymous@example.com",
-            metadata: {
-              type: "donation",
-              amount: amount,
-              source: "homepage",
-            },
-          },
-        },
-      );
-
-      if (error) {
-        throw error;
+  setLoading(true);
+  try {
+    const { data, error } = await supabase.functions.invoke(
+      "create-checkout",
+      {
+        body: {
+          amount: amount, // The dollar amount (e.g., 10.50)
+          successUrl: `${window.location.origin}/success?amount=${amount}`,
+          customerEmail: user?.email || "anonymous@example.com",
+          metadata: {
+            type: "donation",
+            source: "powerlifting-app"
+          }
+        }
       }
+    );
 
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (error: any) {
-      console.error("Donation error:", error);
-      analytics.trackError("donation_failed", error.message);
-      toast({
-        title: "Unable to process donation",
-        description:
-          "Please try again later or contact support at meettrackdev@gmail.com",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    if (error) throw error;
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error("No checkout URL received");
     }
-  };
+  } catch (error) {
+    toast.error(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCustomAmountChange = (value: string) => {
     setCustomAmount(value);

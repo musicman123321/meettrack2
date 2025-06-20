@@ -17,47 +17,49 @@ const polar = new Polar({
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { productPriceId, successUrl, customerEmail, metadata } =
-      await req.json();
+    const { amount, successUrl, customerEmail, metadata } = await req.json();
 
-    if (!productPriceId || !successUrl || !customerEmail) {
-      throw new Error("Missing required parameters");
+    if (!amount || !successUrl || !customerEmail) {
+      throw new Error(
+        "Missing required parameters (need amount, successUrl, customerEmail)"
+      );
     }
 
-    // Updated to match Polar API requirements
+    // For "Pay What You Want" products, use the organization ID and product name
     const result = await polar.checkouts.create({
-      products: [
-        {
-          price_id: productPriceId,
-          quantity: 1,
-        },
-      ],
+      organization_id: Deno.env.get("POLAR_ORGANIZATION_ID"),
+      product_name: "Powerlifting Meet Tracker", // Must match exactly
+      amount: Math.round(amount * 100), // Convert to cents
       success_url: successUrl,
       customer_email: customerEmail,
-      ...(metadata && { metadata }),
+      metadata: metadata || {},
     });
 
     return new Response(
-      JSON.stringify({ sessionId: result.id, url: result.url }),
+      JSON.stringify({
+        sessionId: result.id,
+        url: result.url,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error("Detailed error:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("Checkout error:", error);
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+        details: error.cause?.issues || null,
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
