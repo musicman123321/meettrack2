@@ -579,7 +579,7 @@ export default function Home() {
           </div>
           <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200 text-center text-gray-600 text-sm sm:text-base">
             <p>
-              &copy; 2024 Meet Prep Tracker. Built for powerlifters, by
+              &copy; 2025 Meet Prep Tracker. Built for powerlifters, by
               powerlifters.
             </p>
             <p className="mt-2 text-xs text-gray-500">
