@@ -67,7 +67,7 @@ function SupportDonation() {
       throw new Error("No checkout URL received");
     }
   } catch (error) {
-    toast.error(error.message);
+    console.log(error);
   } finally {
     setLoading(false);
   }
