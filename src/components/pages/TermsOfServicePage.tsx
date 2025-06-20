@@ -63,7 +63,7 @@ const TermsOfServicePage: React.FC = () => {
                 application and services.
               </p>
               <p className="text-gray-700 leading-relaxed">
-                <strong>Last updated:</strong> January 1, 2024
+                <strong>Last updated:</strong> January 1, 2025
               </p>
               <p className="text-gray-700 leading-relaxed">
                 By accessing or using Meet Prep Tracker, you agree to be bound

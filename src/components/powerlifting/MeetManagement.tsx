@@ -435,7 +435,7 @@ export default function MeetManagement() {
                       meetName: e.target.value,
                     }))
                   }
-                  placeholder="e.g., State Championships 2024"
+                  placeholder="e.g., State Championships 2025"
                   className="bg-gray-700 border-gray-600 text-white mt-1"
                 />
               </div>
