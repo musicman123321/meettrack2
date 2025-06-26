@@ -45,66 +45,36 @@ function SupportDonation() {
 const handleDonation = async (amount: number) => {
   setLoading(true);
   try {
-    console.log('[Donation] Starting donation process for amount:', amount);
-    console.log('[Donation] Current user email:', user?.email);
-
-    const requestBody = {
-      amount: amount,
-      successUrl: `${window.location.origin}/success?amount=${amount}`,
-      customerEmail: user?.email || "anonymous@example.com",
-      metadata: {
-        type: "donation",
-        source: "powerlifting-app",
-        frontendTimestamp: new Date().toISOString()
-      }
-    };
-
-    console.log('[Donation] Request payload:', requestBody);
-
     const { data, error } = await supabase.functions.invoke(
       "create-checkout",
       {
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          amount: amount,
+          successUrl: `${window.location.origin}/success?amount=${amount}`,
+          customerEmail: user?.email || "anonymous@example.com",
+          metadata: {
+            type: "donation",
+            source: "powerlifting-app"
+          }
+        }),
         headers: {
-          'X-Debug-Request': 'true', // Custom header for debugging
+          'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json'
         }
       }
     );
 
-    console.log('[Donation] Supabase function response:', { data, error });
-
-    if (error) {
-      console.error('[Donation] Function error:', error);
-      throw error;
-    }
-
-    if (!data) {
-      const noDataError = new Error('No response data received from function');
-      console.error('[Donation]', noDataError);
-      throw noDataError;
-    }
-
+    if (error) throw error;
     if (data?.url) {
-      console.log('[Donation] Redirecting to checkout URL:', data.url);
       window.location.href = data.url;
     } else {
-      const noUrlError = new Error('No checkout URL received');
-      console.error('[Donation]', noUrlError, { responseData: data });
-      throw noUrlError;
+      throw new Error("No checkout URL received");
     }
   } catch (error) {
-    console.error('[Donation] Error in donation process:', {
-      error,
-      errorString: String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    
-    // Show user-friendly error message
-    alert('There was an error starting your donation. Please try again.');
+    console.error("Donation error:", error);
+    alert("Failed to initiate donation. Please try again.");
   } finally {
     setLoading(false);
-    console.log('[Donation] Process completed (success or failure)');
   }
 };
 
