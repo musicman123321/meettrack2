@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Polar } from "https://esm.sh/@polar-sh/sdk";
-import { error } from "node:console";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -9,10 +9,10 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Initialize Polar with production settings
 const polar = new Polar({
   accessToken: Deno.env.get("POLAR_ACCESS_TOKEN") || "",
-  server:
-    Deno.env.get("POLAR_ENVIRONMENT") === "sandbox" ? "sandbox" : "production",
+  server: "production", // Always use production for live payments
 });
 
 serve(async (req) => {
@@ -29,14 +29,24 @@ serve(async (req) => {
       );
     }
 
-    // For "Pay What You Want" products, use the organization ID and product name
+    // Validate required environment variables
+    const organizationId = Deno.env.get("POLAR_ORGANIZATION_ID");
+    if (!organizationId) {
+      throw new Error("POLAR_ORGANIZATION_ID environment variable is required");
+    }
+
+    // Create checkout session for "Pay What You Want" product
     const result = await polar.checkouts.create({
-      organization_id: Deno.env.get("POLAR_ORGANIZATION_ID"),
-      product_name: "Powerlifting Meet Tracker", // Must match exactly
+      organization_id: organizationId,
+      product_name: "Meet Prep Tracker Support", // Updated product name
       amount: Math.round(amount * 100), // Convert to cents
       success_url: successUrl,
       customer_email: customerEmail,
-      metadata: metadata || {},
+      metadata: {
+        ...metadata,
+        environment: "production",
+        timestamp: new Date().toISOString(),
+      },
     });
 
     return new Response(
@@ -51,10 +61,22 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Checkout error:", error);
+
+    // Enhanced error logging for production debugging
+    const errorDetails = {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause,
+      timestamp: new Date().toISOString(),
+    };
+
+    console.error("Detailed error:", errorDetails);
+
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: error.message || "An error occurred while creating checkout",
         details: error.cause?.issues || null,
+        timestamp: new Date().toISOString(),
       }),
       {
         status: 400,

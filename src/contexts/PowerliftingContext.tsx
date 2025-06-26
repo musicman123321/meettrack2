@@ -712,6 +712,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw updateError;
       }
 
+      // Clear all caches to force refresh
+      clearCache();
+
       debugLog("Successfully saved current stats");
       dispatch({ type: "SET_CURRENT_STATS", payload: stats });
     } catch (err: any) {
@@ -766,6 +769,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to save meet goals: ${error.message}`);
       }
 
+      // Clear all caches to force refresh
+      clearCache();
+
       debugLog("Successfully saved meet goals");
       dispatch({ type: "SET_MEET_GOALS", payload: goals });
     } catch (err: any) {
@@ -808,6 +814,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
       debugLog("Successfully saved meet info");
       dispatch({ type: "SET_MEET_INFO", payload: info });
+
+      // Force a complete data refresh after saving meet info
+      await fetchUserData(true);
     } catch (err: any) {
       errorLog("Error saving meet info", err);
       throw err;
@@ -865,6 +874,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Clear all caches to force refresh
+      clearCache();
+
       debugLog("Successfully added/updated weight entry");
       dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
     } catch (err: any) {
@@ -897,6 +909,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to toggle equipment: ${error.message}`);
       }
 
+      // Clear all caches to force refresh
+      clearCache();
+
       debugLog("Successfully toggled equipment item");
       dispatch({ type: "TOGGLE_EQUIPMENT", payload: itemId });
     } catch (err: any) {
@@ -920,6 +935,10 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       };
 
       await saveCurrentStats(updatedStats);
+
+      // Force a complete data refresh to ensure UI consistency
+      await fetchUserData(true);
+
       debugLog("Successfully updated current weight");
     } catch (err: any) {
       errorLog("Error updating current weight", err);
@@ -978,6 +997,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       if (data) {
         dispatch({ type: "SET_USER_SETTINGS", payload: data });
       }
+
+      // Clear all caches to force refresh
+      clearCache();
 
       debugLog("Successfully saved user settings");
     } catch (err: any) {
