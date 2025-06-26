@@ -43,22 +43,23 @@ function SupportDonation() {
   const donationAmounts = [5, 10, 25, 50];
 
   const handleDonation = async (amount: number) => {
+    console.log("Request headers:", Object.fromEntries(req.headers));
   setLoading(true);
   try {
     const { data, error } = await supabase.functions.invoke(
-      "create-checkout",
-      {
-        body: {
-          amount: amount, // The dollar amount (e.g., 10.50)
-          successUrl: `${window.location.origin}/success?amount=${amount}`,
-          customerEmail: user?.email || "anonymous@example.com",
-          metadata: {
-            type: "donation",
-            source: "powerlifting-app"
-          }
-        }
+  "create-checkout",
+  {
+    body: JSON.stringify({  // Convert to JSON string
+      amount: amount,
+      successUrl: `${window.location.origin}/success?amount=${amount}`,
+      customerEmail: user?.email || "anonymous@example.com",
+      metadata: {
+        type: "donation",
+        source: "powerlifting-app"
       }
-    );
+    })
+  }
+);
 
     if (error) throw error;
     if (data?.url) {
@@ -68,6 +69,14 @@ function SupportDonation() {
     }
   } catch (error) {
     console.log(error);
+    return new Response(
+  JSON.stringify({ error: "Invalid JSON in request body" }),
+  {
+    status: 400,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  }
+);
+console.log(response);
   } finally {
     setLoading(false);
   }
