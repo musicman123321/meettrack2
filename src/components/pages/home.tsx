@@ -69,14 +69,6 @@ function SupportDonation() {
     }
   } catch (error) {
     console.log(error);
-    return new Response(
-  JSON.stringify({ error: "Invalid JSON in request body" }),
-  {
-    status: 400,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  }
-);
-console.log(response);
   } finally {
     setLoading(false);
   }
