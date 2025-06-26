@@ -9,62 +9,108 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-// Initialize Polar with production settings
 const polar = new Polar({
   accessToken: Deno.env.get("POLAR_ACCESS_TOKEN") || "",
-  server: "production", // Always use production for live payments
+  server: "production",
 });
 
+// Debug logger
+const debugLog = (...args: unknown[]) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}]`, ...args);
+};
+
 serve(async (req) => {
+  // Log incoming request
+  debugLog("Incoming request:", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers),
+  });
+
   if (req.method === "OPTIONS") {
+    debugLog("Handling OPTIONS request");
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // Validate content type
+    const contentType = req.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
+      const error = new Error("Unsupported content type");
+      debugLog("Content type error:", { contentType });
+      return new Response(
+        JSON.stringify({ error: "Content type must be application/json" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const body = await req.text();
-    console.log("Raw request body:", body);
+    debugLog("Raw request body:", body);
 
     let requestData;
     try {
       requestData = JSON.parse(body);
+      debugLog("Parsed request data:", requestData);
     } catch (parseError) {
-      console.error("JSON parse error:", parseError);
-      throw new Error("Invalid JSON in request body");
-    }
-
-    console.log("Parsed request data:", requestData);
-    const { amount, successUrl, customerEmail, metadata } = requestData;
-
-    if (!amount || !successUrl || !customerEmail) {
-      console.error("Missing parameters:", {
-        amount,
-        successUrl,
-        customerEmail,
-      });
-      throw new Error(
-        "Missing required parameters (need amount, successUrl, customerEmail)"
+      debugLog("JSON parse error:", parseError);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    // Validate required environment variables
+    const { amount, successUrl, customerEmail, metadata } = requestData;
+
+    // Validate required parameters
+    const missingParams = [];
+    if (!amount) missingParams.push("amount");
+    if (!successUrl) missingParams.push("successUrl");
+    if (!customerEmail) missingParams.push("customerEmail");
+
+    if (missingParams.length > 0) {
+      debugLog("Missing parameters:", missingParams);
+      return new Response(
+        JSON.stringify({
+          error: "Missing required parameters",
+          missing: missingParams,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validate environment variables
     const organizationId = Deno.env.get("POLAR_ORGANIZATION_ID");
     const accessToken = Deno.env.get("POLAR_ACCESS_TOKEN");
 
-    console.log("Environment check:", {
-      hasOrgId: !!organizationId,
+    debugLog("Environment variables check:", {
+      hasOrganizationId: !!organizationId,
       hasAccessToken: !!accessToken,
-      orgIdLength: organizationId?.length || 0,
     });
 
-    if (!organizationId) {
-      throw new Error("POLAR_ORGANIZATION_ID environment variable is required");
+    if (!organizationId || !accessToken) {
+      const error = new Error(
+        !organizationId
+          ? "POLAR_ORGANIZATION_ID is required"
+          : "POLAR_ACCESS_TOKEN is required"
+      );
+      debugLog("Environment error:", error.message);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    if (!accessToken) {
-      throw new Error("POLAR_ACCESS_TOKEN environment variable is required");
-    }
-
-    // Create checkout session for "Pay What You Want" product
+    // Prepare checkout data
     const checkoutData = {
       organization_id: organizationId,
       product_name: "Meet Prep Tracker Support",
@@ -74,13 +120,33 @@ serve(async (req) => {
       metadata: {
         ...metadata,
         environment: "production",
-        timestamp: new Date().toISOString(),
+        backendTimestamp: new Date().toISOString(),
       },
     };
 
-    console.log("Creating checkout with data:", checkoutData);
+    debugLog("Creating checkout with data:", checkoutData);
 
-    const result = await polar.checkouts.create(checkoutData);
+    // Call Polar API
+    let result;
+    try {
+      result = await polar.checkouts.create(checkoutData);
+      debugLog("Polar API response:", result);
+    } catch (polarError) {
+      debugLog("Polar API error:", {
+        error: polarError,
+        response: polarError.response?.data,
+      });
+      return new Response(
+        JSON.stringify({
+          error: "Error creating Polar checkout",
+          details: polarError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     return new Response(
       JSON.stringify({
@@ -93,26 +159,18 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Checkout error:", error);
-
-    // Enhanced error logging for production debugging
-    const errorDetails = {
-      message: error.message,
-      stack: error.stack,
-      cause: error.cause,
-      timestamp: new Date().toISOString(),
-    };
-
-    console.error("Detailed error:", errorDetails);
+    debugLog("Unexpected error:", {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
 
     return new Response(
       JSON.stringify({
-        error: error.message || "An error occurred while creating checkout",
-        details: error.cause?.issues || null,
-        timestamp: new Date().toISOString(),
+        error: "An unexpected error occurred",
+        details: error instanceof Error ? error.message : String(error),
       }),
       {
-        status: 400,
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
