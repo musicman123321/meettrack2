@@ -21,9 +21,26 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, successUrl, customerEmail, metadata } = await req.json();
+    const body = await req.text();
+    console.log("Raw request body:", body);
+
+    let requestData;
+    try {
+      requestData = JSON.parse(body);
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      throw new Error("Invalid JSON in request body");
+    }
+
+    console.log("Parsed request data:", requestData);
+    const { amount, successUrl, customerEmail, metadata } = requestData;
 
     if (!amount || !successUrl || !customerEmail) {
+      console.error("Missing parameters:", {
+        amount,
+        successUrl,
+        customerEmail,
+      });
       throw new Error(
         "Missing required parameters (need amount, successUrl, customerEmail)",
       );
@@ -31,14 +48,26 @@ serve(async (req) => {
 
     // Validate required environment variables
     const organizationId = Deno.env.get("POLAR_ORGANIZATION_ID");
+    const accessToken = Deno.env.get("POLAR_ACCESS_TOKEN");
+
+    console.log("Environment check:", {
+      hasOrgId: !!organizationId,
+      hasAccessToken: !!accessToken,
+      orgIdLength: organizationId?.length || 0,
+    });
+
     if (!organizationId) {
       throw new Error("POLAR_ORGANIZATION_ID environment variable is required");
     }
 
+    if (!accessToken) {
+      throw new Error("POLAR_ACCESS_TOKEN environment variable is required");
+    }
+
     // Create checkout session for "Pay What You Want" product
-    const result = await polar.checkouts.create({
+    const checkoutData = {
       organization_id: organizationId,
-      product_name: "Meet Prep Tracker Support", // Updated product name
+      product_name: "Meet Prep Tracker Support",
       amount: Math.round(amount * 100), // Convert to cents
       success_url: successUrl,
       customer_email: customerEmail,
@@ -47,7 +76,11 @@ serve(async (req) => {
         environment: "production",
         timestamp: new Date().toISOString(),
       },
-    });
+    };
+
+    console.log("Creating checkout with data:", checkoutData);
+
+    const result = await polar.checkouts.create(checkoutData);
 
     return new Response(
       JSON.stringify({

@@ -712,8 +712,16 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw updateError;
       }
 
-      // Clear all caches to force refresh
-      clearCache();
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedCacheData = {
+          ...cachedData,
+          currentStats: stats,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
 
       debugLog("Successfully saved current stats");
       dispatch({ type: "SET_CURRENT_STATS", payload: stats });
@@ -769,8 +777,16 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to save meet goals: ${error.message}`);
       }
 
-      // Clear all caches to force refresh
-      clearCache();
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedCacheData = {
+          ...cachedData,
+          meetGoals: goals,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
 
       debugLog("Successfully saved meet goals");
       dispatch({ type: "SET_MEET_GOALS", payload: goals });
@@ -809,8 +825,16 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to save meet info: ${error.message}`);
       }
 
-      // Clear caches to force refresh
-      clearCache();
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedCacheData = {
+          ...cachedData,
+          meetInfo: info,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
 
       debugLog("Successfully saved meet info");
       dispatch({ type: "SET_MEET_INFO", payload: info });
@@ -874,8 +898,25 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Clear all caches to force refresh
-      clearCache();
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedWeightHistory = [...cachedData.weightHistory];
+        const existingIndex = updatedWeightHistory.findIndex(
+          (w) => w.date === entry.date,
+        );
+        if (existingIndex >= 0) {
+          updatedWeightHistory[existingIndex] = entry;
+        } else {
+          updatedWeightHistory.unshift(entry);
+        }
+        const updatedCacheData = {
+          ...cachedData,
+          weightHistory: updatedWeightHistory,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
 
       debugLog("Successfully added/updated weight entry");
       dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
@@ -909,8 +950,19 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to toggle equipment: ${error.message}`);
       }
 
-      // Clear all caches to force refresh
-      clearCache();
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedEquipment = cachedData.equipmentChecklist.map((item) =>
+          item.id === itemId ? { ...item, checked: !item.checked } : item,
+        );
+        const updatedCacheData = {
+          ...cachedData,
+          equipmentChecklist: updatedEquipment,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
 
       debugLog("Successfully toggled equipment item");
       dispatch({ type: "TOGGLE_EQUIPMENT", payload: itemId });
@@ -998,8 +1050,17 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SET_USER_SETTINGS", payload: data });
       }
 
-      // Clear all caches to force refresh
-      clearCache();
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData && data) {
+        const updatedCacheData = {
+          ...cachedData,
+          userSettings: data,
+          unitPreference: data.weight_unit,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
 
       debugLog("Successfully saved user settings");
     } catch (err: any) {
