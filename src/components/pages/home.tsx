@@ -31,6 +31,7 @@ import { useAuth } from "../../../supabase/auth";
 import { supabase } from "../../../supabase/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { analytics } from "@/utils/analytics";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 // Support Donation Component
 function SupportDonation() {
@@ -42,36 +43,95 @@ function SupportDonation() {
 
   const donationAmounts = [5, 10, 25, 50];
 
-  const handleDonation = async (amount: number) => {
-  setLoading(true);
-  try {
-    const { data, error } = await supabase.functions.invoke(
-      "create-checkout",
-      {
-        body: {
-          amount: amount, // The dollar amount (e.g., 10.50)
-          successUrl: `${window.location.origin}/success?amount=${amount}`,
-          customerEmail: user?.email || "anonymous@example.com",
-          metadata: {
-            type: "donation",
-            source: "powerlifting-app"
-          }
-        }
-      }
-    );
+  const handlePayPalApprove = async (data: any, actions: any) => {
+    setLoading(true);
+    try {
+      console.log("PayPal payment approved:", data);
 
-    if (error) throw error;
-    if (data?.url) {
-      window.location.href = data.url;
-    } else {
-      throw new Error("No checkout URL received");
+      // Capture the payment
+      const { data: captureData, error } = await supabase.functions.invoke(
+        "capture-paypal-order",
+        {
+          body: {
+            orderId: data.orderID,
+          },
+        },
+      );
+
+      if (error) {
+        console.error("Capture error:", error);
+        throw error;
+      }
+
+      console.log("Payment captured successfully:", captureData);
+
+      // Track the donation
+      analytics.trackDonationClick(getDonationAmount());
+
+      // Redirect to success page
+      const amount = getDonationAmount();
+      window.location.href = `${window.location.origin}/success?amount=${amount}&type=donation`;
+    } catch (error) {
+      console.error("PayPal capture error:", error);
+      toast({
+        title: "Payment Error",
+        description:
+          "There was an issue processing your payment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.log(error);
-  } finally {
+  };
+
+  const handlePayPalError = (error: any) => {
+    console.error("PayPal error:", error);
+    toast({
+      title: "Payment Error",
+      description: "There was an issue with PayPal. Please try again.",
+      variant: "destructive",
+    });
     setLoading(false);
-  }
-};
+  };
+
+  const createPayPalOrder = async (data: any, actions: any) => {
+    try {
+      const amount = getDonationAmount();
+      console.log("Creating PayPal order for amount:", amount);
+
+      const { data: orderData, error } = await supabase.functions.invoke(
+        "create-paypal-order",
+        {
+          body: {
+            amount: amount,
+            successUrl: `${window.location.origin}/success?amount=${amount}&type=donation`,
+            cancelUrl: `${window.location.origin}`,
+            customerEmail: user?.email || "anonymous@example.com",
+            metadata: {
+              type: "donation",
+              source: "powerlifting-app",
+            },
+          },
+        },
+      );
+
+      if (error) {
+        console.error("Order creation error:", error);
+        throw error;
+      }
+
+      console.log("PayPal order created:", orderData);
+      return orderData.orderId;
+    } catch (error) {
+      console.error("Error creating PayPal order:", error);
+      toast({
+        title: "Payment Error",
+        description: "Failed to create payment order. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   const handleCustomAmountChange = (value: string) => {
     setCustomAmount(value);
@@ -178,30 +238,50 @@ function SupportDonation() {
             </div>
           )}
 
-          {/* Donation Button */}
-          <Button
-            onClick={() => handleDonation(getDonationAmount())}
-            disabled={
-              loading ||
-              (showCustom && (!customAmount || parseFloat(customAmount) <= 0))
-            }
-            className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            size="lg"
-          >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Processing...
+          {/* PayPal Donation Button */}
+          <div className="w-full">
+            <PayPalScriptProvider
+              options={{
+                "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || "",
+                currency: "USD",
+                intent: "capture",
+              }}
+            >
+              <PayPalButtons
+                disabled={
+                  loading ||
+                  (showCustom &&
+                    (!customAmount || parseFloat(customAmount) <= 0))
+                }
+                style={{
+                  layout: "vertical",
+                  color: "gold",
+                  shape: "rect",
+                  label: "donate",
+                  height: 50,
+                }}
+                createOrder={createPayPalOrder}
+                onApprove={handlePayPalApprove}
+                onError={handlePayPalError}
+                onCancel={() => {
+                  console.log("PayPal payment cancelled");
+                  setLoading(false);
+                }}
+              />
+            </PayPalScriptProvider>
+
+            {loading && (
+              <div className="flex items-center justify-center gap-2 mt-3 text-gray-600">
+                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                Processing payment...
               </div>
-            ) : (
-              `Donate ${getDonationAmount()}`
             )}
-          </Button>
+          </div>
 
           {/* Security Note */}
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-500">
-              🔒 Secure payment powered by Polar.sh
+              🔒 Secure payment powered by PayPal
             </p>
             <p className="text-xs text-gray-400">
               100% optional • Your support helps us maintain and improve the
