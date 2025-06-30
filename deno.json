@@ -13,5 +13,9 @@
     "files": {
       "include": ["supabase/functions/"]
     }
+  },
+  "tasks": {
+    "dev": "supabase functions serve --env-file .env",
+    "deploy": "supabase functions deploy create-checkout --no-verify-jwt"
   }
 }

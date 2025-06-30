@@ -21,7 +21,6 @@ const debugLog = (...args: unknown[]) => {
 };
 
 serve(async (req) => {
-  // Log incoming request
   debugLog("Incoming request:", {
     method: req.method,
     url: req.url,
@@ -34,31 +33,25 @@ serve(async (req) => {
   }
 
   try {
-    // Validate content type
-    const contentType = req.headers.get("content-type");
-    if (!contentType?.includes("application/json")) {
-      const error = new Error("Unsupported content type");
-      debugLog("Content type error:", { contentType });
-      return new Response(
-        JSON.stringify({ error: "Content type must be application/json" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    // First get raw body text
+    const rawBody = await req.text();
+    debugLog("Raw request body:", rawBody);
 
-    const body = await req.text();
-    debugLog("Raw request body:", body);
-
+    // Then parse JSON
     let requestData;
     try {
-      requestData = JSON.parse(body);
+      requestData = JSON.parse(rawBody);
       debugLog("Parsed request data:", requestData);
     } catch (parseError) {
       debugLog("JSON parse error:", parseError);
       return new Response(
-        JSON.stringify({ error: "Invalid JSON in request body" }),
+        JSON.stringify({
+          error: "Invalid JSON in request body",
+          details:
+            parseError instanceof Error
+              ? parseError.message
+              : String(parseError),
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -66,11 +59,10 @@ serve(async (req) => {
       );
     }
 
-    const { amount, successUrl, customerEmail, metadata } = requestData;
-
     // Validate required parameters
+    const { amount, successUrl, customerEmail, metadata } = requestData;
     const missingParams = [];
-    if (!amount) missingParams.push("amount");
+    if (amount === undefined || amount === null) missingParams.push("amount");
     if (!successUrl) missingParams.push("successUrl");
     if (!customerEmail) missingParams.push("customerEmail");
 
@@ -90,21 +82,17 @@ serve(async (req) => {
 
     // Validate environment variables
     const organizationId = Deno.env.get("POLAR_ORGANIZATION_ID");
+    const productId = Deno.env.get("POLAR_PRODUCT_ID");
     const accessToken = Deno.env.get("POLAR_ACCESS_TOKEN");
 
-    debugLog("Environment variables check:", {
-      hasOrganizationId: !!organizationId,
-      hasAccessToken: !!accessToken,
-    });
-
-    if (!organizationId || !accessToken) {
-      const error = new Error(
-        !organizationId
-          ? "POLAR_ORGANIZATION_ID is required"
-          : "POLAR_ACCESS_TOKEN is required"
-      );
-      debugLog("Environment error:", error.message);
-      return new Response(JSON.stringify({ error: error.message }), {
+    if (!organizationId || !productId || !accessToken) {
+      const errorMessage = !organizationId
+        ? "POLAR_ORGANIZATION_ID is missing"
+        : !productId
+        ? "POLAR_PRODUCT_ID is missing"
+        : "POLAR_ACCESS_TOKEN is missing";
+      debugLog("Environment error:", errorMessage);
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -113,45 +101,36 @@ serve(async (req) => {
     // Prepare checkout data
     const checkoutData = {
       organization_id: organizationId,
-      product_name: "Meet Prep Tracker Support",
-      amount: Math.round(amount * 100), // Convert to cents
+      products: [
+        {
+          type: "paywhatyouwant",
+          id: productId,
+          name: "Meet Prep Tracker Support",
+          price: {
+            currency: "USD",
+            amount: Math.round(Number(amount) * 100), // Ensure amount is a number
+          },
+        },
+      ],
       success_url: successUrl,
       customer_email: customerEmail,
       metadata: {
-        ...metadata,
+        ...(metadata || {}),
         environment: "production",
-        backendTimestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
       },
     };
 
     debugLog("Creating checkout with data:", checkoutData);
 
     // Call Polar API
-    let result;
-    try {
-      result = await polar.checkouts.create(checkoutData);
-      debugLog("Polar API response:", result);
-    } catch (polarError) {
-      debugLog("Polar API error:", {
-        error: polarError,
-        response: polarError.response?.data,
-      });
-      return new Response(
-        JSON.stringify({
-          error: "Error creating Polar checkout",
-          details: polarError.message,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    const result = await polar.checkouts.create(checkoutData);
+    debugLog("Polar API response:", result);
 
     return new Response(
       JSON.stringify({
-        sessionId: result.id,
         url: result.url,
+        sessionId: result.id,
       }),
       {
         status: 200,
@@ -159,14 +138,10 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    debugLog("Unexpected error:", {
-      error: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-
+    debugLog("Unexpected error:", error);
     return new Response(
       JSON.stringify({
-        error: "An unexpected error occurred",
+        error: "Internal server error",
         details: error instanceof Error ? error.message : String(error),
       }),
       {
