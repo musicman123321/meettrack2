@@ -34,280 +34,127 @@ import { analytics } from "@/utils/analytics";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 // Support Donation Component
-function SupportDonation() {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState(5);
-  const [customAmount, setCustomAmount] = useState("");
-  const [showCustom, setShowCustom] = useState(false);
-
-  const donationAmounts = [5, 10, 25, 50];
-
-  const handlePayPalApprove = async (data: any, actions: any) => {
-    setLoading(true);
-    try {
-      console.log("PayPal payment approved:", data);
-
-      // Capture the payment
-      const { data: captureData, error } = await supabase.functions.invoke(
-        "capture-paypal-order",
-        {
-          body: {
-            orderId: data.orderID,
-          },
-        },
-      );
-
-      if (error) {
-        console.error("Capture error:", error);
-        throw error;
-      }
-
-      console.log("Payment captured successfully:", captureData);
-
-      // Track the donation
-      analytics.trackDonationClick(getDonationAmount());
-
-      // Redirect to success page
-      const amount = getDonationAmount();
-      window.location.href = `${window.location.origin}/success?amount=${amount}&type=donation`;
-    } catch (error) {
-      console.error("PayPal capture error:", error);
-      toast({
-        title: "Payment Error",
-        description:
-          "There was an issue processing your payment. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+function SupportDonation({ isTestMode = false }) {
+  // Configuration for different environments
+  const config = {
+    production: {
+      url: "https://www.paypal.com/donate",
+      buttonId: "ULFDFJDS9B6EU"
+    },
+    sandbox: {
+      url: "https://www.sandbox.paypal.com/donate", 
+      buttonId: "Y7DU3PFDUFY6W" // Your new sandbox button ID
     }
   };
 
-  const handlePayPalError = (error: any) => {
-    console.error("PayPal error:", error);
-    toast({
-      title: "Payment Error",
-      description: "There was an issue with PayPal. Please try again.",
-      variant: "destructive",
-    });
-    setLoading(false);
-  };
-
-  const createPayPalOrder = async (data: any, actions: any) => {
-    try {
-      const amount = getDonationAmount();
-      console.log("Creating PayPal order for amount:", amount);
-
-      const { data: orderData, error } = await supabase.functions.invoke(
-        "create-paypal-order",
-        {
-          body: {
-            amount: amount,
-            successUrl: `${window.location.origin}/success?amount=${amount}&type=donation`,
-            cancelUrl: `${window.location.origin}`,
-            customerEmail: user?.email || "anonymous@example.com",
-            metadata: {
-              type: "donation",
-              source: "powerlifting-app",
-            },
-          },
-        },
-      );
-
-      if (error) {
-        console.error("Order creation error:", error);
-        throw error;
-      }
-
-      console.log("PayPal order created:", orderData);
-      return orderData.orderId;
-    } catch (error) {
-      console.error("Error creating PayPal order:", error);
-      toast({
-        title: "Payment Error",
-        description: "Failed to create payment order. Please try again.",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const handleCustomAmountChange = (value: string) => {
-    setCustomAmount(value);
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue > 0) {
-      setSelectedAmount(numValue);
-    }
-  };
-
-  const getDonationAmount = () => {
-    if (showCustom && customAmount) {
-      const amount = parseFloat(customAmount);
-      return !isNaN(amount) && amount > 0 ? amount : selectedAmount;
-    }
-    return selectedAmount;
-  };
+  const currentConfig = isTestMode ? config.sandbox : config.production;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {/* Test Mode Indicator */}
+      {isTestMode && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-center mb-2">
+            <span className="text-lg mr-2">🧪</span>
+            <h3 className="font-semibold text-yellow-800">SANDBOX MODE</h3>
+          </div>
+          <p className="text-yellow-700 text-sm">
+            Test payments only - no real money will be charged
+          </p>
+          <div className="mt-2 text-xs text-yellow-600">
+            Button ID: {currentConfig.buttonId}
+          </div>
+        </div>
+      )}
+
       <Card className="bg-white border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="text-center pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center mb-4">
             <Heart className="h-8 w-8 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
-            Support Our Development
+            Support Independent Development
           </CardTitle>
           <CardDescription className="text-gray-600 text-lg">
-            Help us continue improving Meet Prep Tracker with your contribution
+            Help keep Meet Prep Tracker free and growing
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 px-8 pb-8">
-          {/* Preset Amounts */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-gray-900 text-center">
-              Choose an amount
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {donationAmounts.map((amount) => (
-                <Button
-                  key={amount}
-                  variant={
-                    selectedAmount === amount && !showCustom
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() => {
-                    setSelectedAmount(amount);
-                    setShowCustom(false);
-                    setCustomAmount("");
-                  }}
-                  className={
-                    selectedAmount === amount && !showCustom
-                      ? "bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-md"
-                      : "border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-                  }
-                  size="lg"
-                >
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  {amount}
-                </Button>
-              ))}
-            </div>
+        <CardContent className="px-8 pb-8">
+          {/* Why Donate Section */}
+          <div className="mb-6 text-center">
+            <p className="text-gray-700 mb-4">
+              Meet Prep Tracker is built and maintained by <strong>one developer</strong> who's passionate about powerlifting. 
+              Your donation directly supports:
+            </p>
+            <ul className="text-left list-disc pl-5 space-y-2 text-gray-600 mb-6 max-w-md mx-auto">
+              <li>Server costs and hosting fees</li>
+              <li>New feature development</li>
+              <li>Bug fixes and maintenance</li>
+            </ul>
+            <p className="text-gray-700 font-medium">
+              Every contribution makes a difference! ❤️
+            </p>
           </div>
-
-          {/* Custom Amount Toggle */}
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowCustom(!showCustom);
-                if (!showCustom) {
-                  setCustomAmount("");
-                }
-              }}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              {showCustom ? "Choose preset amount" : "Enter custom amount"}
-            </Button>
-          </div>
-
-          {/* Custom Amount Input */}
-          {showCustom && (
-            <div className="space-y-2">
-              <Label
-                htmlFor="custom-amount"
-                className="text-gray-700 font-medium"
-              >
-                Custom Amount ($)
-              </Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  id="custom-amount"
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={customAmount}
-                  onChange={(e) => handleCustomAmountChange(e.target.value)}
-                  placeholder="Enter amount"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                />
-              </div>
-            </div>
-          )}
 
           {/* PayPal Donation Button */}
-          <div className="w-full">
-            <PayPalScriptProvider
-              options={{
-                "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || "",
-                currency: "USD",
-                intent: "capture",
-              }}
-            >
-              <PayPalButtons
-                disabled={
-                  loading ||
-                  (showCustom &&
-                    (!customAmount || parseFloat(customAmount) <= 0))
-                }
-                style={{
-                  layout: "vertical",
-                  color: "gold",
-                  shape: "rect",
-                  label: "donate",
-                  height: 50,
-                }}
-                createOrder={createPayPalOrder}
-                onApprove={handlePayPalApprove}
-                onError={handlePayPalError}
-                onCancel={() => {
-                  console.log("PayPal payment cancelled");
-                  setLoading(false);
-                }}
-              />
-            </PayPalScriptProvider>
-
-            {loading && (
-              <div className="flex items-center justify-center gap-2 mt-3 text-gray-600">
-                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                Processing payment...
-              </div>
+          <div className="text-center mb-6">
+            {isTestMode ? (
+              // Sandbox: Use direct payment form instead of hosted button
+              <form 
+                action="https://www.sandbox.paypal.com/cgi-bin/webscr"
+                method="post" 
+                target="_blank"
+                className="inline-block"
+              >
+                <input type="hidden" name="cmd" value="_donations" />
+                <input type="hidden" name="business" value="sb-uep2344222452@business.example.com" />
+                <input type="hidden" name="item_name" value="Meet Prep Tracker Support" />
+                <input type="hidden" name="currency_code" value="USD" />
+                <input type="hidden" name="no_note" value="0" />
+                <input type="hidden" name="no_shipping" value="1" />
+                <input type="hidden" name="return" value="https://your-site.com/thank-you" />
+                <input type="hidden" name="cancel_return" value="https://your-site.com/cancelled" />
+                <button 
+                  type="submit" 
+                  className="border-0 bg-transparent p-0 hover:scale-105 transition-transform"
+                >
+                  <img 
+                    src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" 
+                    alt="Donate with PayPal button"
+                    className="h-12 w-auto" 
+                  />
+                </button>
+              </form>
+            ) : (
+              // Production: Use your working hosted button
+              <form 
+                action={currentConfig.url}
+                method="post" 
+                target="_blank"
+                className="inline-block"
+              >
+                <input type="hidden" name="hosted_button_id" value={currentConfig.buttonId} />
+                <button 
+                  type="submit" 
+                  className="border-0 bg-transparent p-0 hover:scale-105 transition-transform"
+                >
+                  <img 
+                    src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" 
+                    alt="Donate with PayPal button"
+                    className="h-12 w-auto" 
+                  />
+                </button>
+              </form>
             )}
           </div>
 
-          {/* Security Note */}
+          {/* Security & Transparency */}
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-500">
+<<<<<<< HEAD
               🔒 Secure payment powered by PayPal
-            </p>
-            <p className="text-xs text-gray-400">
-              100% optional • Your support helps us maintain and improve the
-              platform
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-const features = [
-  {
-    icon: <Target className="h-8 w-8 text-red-500" />,
-    title: "Lift Tracking",
-    description:
-      "Track your squat, bench press, and deadlift progress with detailed attempt planning and confidence tracking.",
-  },
-  {
-    icon: <Scale className="h-8 w-8 text-blue-500" />,
-    title: "Weight Management",
-    description:
-      "Monitor your weight cutting progress and ensure you make your target weight class on competition day.",
-  },
-  {
+=======
+              🔒 100% secure payment processed by PayPal
     icon: <CheckSquare className="h-8 w-8 text-green-500" />,
     title: "Equipment Checklist",
     description:
@@ -347,7 +194,6 @@ const testimonials = [
     content:
       "I recommend this to all my athletes. The attempt selection tool is incredibly useful for meet planning.",
     rating: 5,
-  },
   {
     name: "Emma Rodriguez",
     role: "First-Time Competitor",

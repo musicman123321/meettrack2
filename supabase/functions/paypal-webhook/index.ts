@@ -46,7 +46,7 @@ async function getPayPalAccessToken(): Promise<string> {
 async function verifyPayPalWebhook(
   request: Request,
   body: string,
-  accessToken: string,
+  accessToken: string
 ): Promise<boolean> {
   try {
     const webhookId = Deno.env.get("PAYPAL_WEBHOOK_ID");
@@ -85,7 +85,7 @@ async function verifyPayPalWebhook(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(verificationData),
-      },
+      }
     );
 
     const result = await response.json();
@@ -101,7 +101,7 @@ async function verifyPayPalWebhook(
 // Store webhook event in database
 async function storeWebhookEvent(
   supabaseClient: any,
-  eventData: any,
+  eventData: any
 ): Promise<any> {
   try {
     const { data, error } = await supabaseClient
@@ -134,7 +134,7 @@ async function storeWebhookEvent(
 // Handle payment capture completed
 async function handlePaymentCaptureCompleted(
   supabaseClient: any,
-  eventData: any,
+  eventData: any
 ) {
   console.log("Handling payment capture completed:", eventData.resource.id);
 
@@ -230,7 +230,7 @@ serve(async (req) => {
     const isValidSignature = await verifyPayPalWebhook(
       req,
       rawBody,
-      accessToken,
+      accessToken
     );
 
     if (!isValidSignature) {
@@ -240,7 +240,7 @@ serve(async (req) => {
         {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        }
       );
     }
 
@@ -252,7 +252,7 @@ serve(async (req) => {
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     // Store the webhook event
@@ -276,7 +276,7 @@ serve(async (req) => {
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      }
     );
   } catch (error) {
     console.error("Error processing PayPal webhook:", error);
@@ -286,7 +286,7 @@ serve(async (req) => {
       try {
         const supabaseClient = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
         );
 
         await supabaseClient

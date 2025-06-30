@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -48,11 +47,11 @@ async function getPayPalAccessToken(): Promise<string> {
 // Create PayPal Order
 async function createPayPalOrder(
   accessToken: string,
-  orderData: any,
+  orderData: any
 ): Promise<any> {
   console.log(
     "Creating PayPal order with data:",
-    JSON.stringify(orderData, null, 2),
+    JSON.stringify(orderData, null, 2)
   );
 
   const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
@@ -70,7 +69,7 @@ async function createPayPalOrder(
   if (!response.ok) {
     console.error("PayPal order creation error:", responseData);
     throw new Error(
-      `Failed to create PayPal order: ${JSON.stringify(responseData)}`,
+      `Failed to create PayPal order: ${JSON.stringify(responseData)}`
     );
   }
 
@@ -150,7 +149,7 @@ serve(async (req) => {
 
     // Find the approval URL
     const approvalUrl = order.links?.find(
-      (link: any) => link.rel === "approve",
+      (link: any) => link.rel === "approve"
     )?.href;
 
     if (!approvalUrl) {
@@ -166,7 +165,7 @@ serve(async (req) => {
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      }
     );
   } catch (error) {
     console.error("PayPal order creation error:", error);
@@ -187,7 +186,7 @@ serve(async (req) => {
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      }
     );
   }
 });

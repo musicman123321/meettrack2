@@ -48,7 +48,7 @@ async function getPayPalAccessToken(): Promise<string> {
 // Capture PayPal Order
 async function capturePayPalOrder(
   accessToken: string,
-  orderId: string,
+  orderId: string
 ): Promise<any> {
   console.log("Capturing PayPal order:", orderId);
 
@@ -61,15 +61,19 @@ async function capturePayPalOrder(
         "Content-Type": "application/json",
         "PayPal-Request-Id": crypto.randomUUID(),
       },
+<<<<<<< HEAD
     },
-  );
-
+=======
+    }
   const responseData = await response.json();
-
   if (!response.ok) {
     console.error("PayPal order capture error:", responseData);
     throw new Error(
+<<<<<<< HEAD
       `Failed to capture PayPal order: ${JSON.stringify(responseData)}`,
+=======
+      `Failed to capture PayPal order: ${JSON.stringify(responseData)}`
+>>>>>>> asdfa5
     );
   }
 
@@ -132,7 +136,11 @@ serve(async (req) => {
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+<<<<<<< HEAD
       },
+=======
+      }
+>>>>>>> asdfa5
     );
   } catch (error) {
     console.error("PayPal order capture error:", error);
@@ -154,7 +162,11 @@ serve(async (req) => {
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+<<<<<<< HEAD
       },
+=======
+      }
+>>>>>>> asdfa5
     );
   }
 });
