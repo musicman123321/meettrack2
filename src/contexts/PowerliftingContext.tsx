@@ -398,6 +398,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
               squatMax: currentStatsData.squat_max,
               benchMax: currentStatsData.bench_max,
               deadliftMax: currentStatsData.deadlift_max,
+              goalSquatMax: currentStatsData.goal_squat_max || 0,
+              goalBenchMax: currentStatsData.goal_bench_max || 0,
+              goalDeadliftMax: currentStatsData.goal_deadlift_max || 0,
             }
           : initialState.currentStats,
         meetGoals: transformMeetGoalsFromDB(meetGoalsData || []),
@@ -560,22 +563,40 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     if (!user?.id) return;
 
     try {
+      debugLog("Setting active meet:", meetId);
+
       // Set all meets to inactive
-      await supabase
+      const { error: deactivateError } = await supabase
         .from("meets")
         .update({ is_active: false })
         .eq("user_id", user.id);
 
+      if (deactivateError) {
+        throw new Error(
+          `Failed to deactivate meets: ${deactivateError.message}`,
+        );
+      }
+
       // Set the selected meet to active
-      await supabase
+      const { error: activateError } = await supabase
         .from("meets")
         .update({ is_active: true })
         .eq("id", meetId)
         .eq("user_id", user.id);
 
+      if (activateError) {
+        throw new Error(`Failed to activate meet: ${activateError.message}`);
+      }
+
+      debugLog(
+        "Successfully set active meet, clearing cache and refreshing data",
+      );
+
       // Clear caches and refresh data
       clearCache();
       await fetchUserData(true);
+
+      debugLog("Data refreshed after setting active meet");
     } catch (err: any) {
       errorLog("Error setting active meet", err);
       throw err;
@@ -666,8 +687,18 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     const currentMax = state.currentStats[
       `${lift}Max` as keyof CurrentStats
     ] as number;
-    const goalThird = state.meetGoals[lift].third;
-    return Math.min(100, (currentMax / goalThird) * 100);
+    const goalMax = state.currentStats[
+      `goal${lift.charAt(0).toUpperCase() + lift.slice(1)}Max` as keyof CurrentStats
+    ] as number;
+
+    // Prevent division by zero and handle edge cases
+    if (!goalMax || goalMax <= 0 || !currentMax || currentMax < 0) {
+      return 0;
+    }
+
+    // Clamp between 0 and 100
+    const percentage = (currentMax / goalMax) * 100;
+    return Math.min(100, Math.max(0, percentage));
   };
 
   // Save current stats to Supabase
@@ -688,6 +719,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
           squat_max: stats.squatMax,
           bench_max: stats.benchMax,
           deadlift_max: stats.deadliftMax,
+          goal_squat_max: stats.goalSquatMax || 0,
+          goal_bench_max: stats.goalBenchMax || 0,
+          goal_deadlift_max: stats.goalDeadliftMax || 0,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
@@ -703,6 +737,9 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
             squat_max: stats.squatMax,
             bench_max: stats.benchMax,
             deadlift_max: stats.deadliftMax,
+            goal_squat_max: stats.goalSquatMax || 0,
+            goal_bench_max: stats.goalBenchMax || 0,
+            goal_deadlift_max: stats.goalDeadliftMax || 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });

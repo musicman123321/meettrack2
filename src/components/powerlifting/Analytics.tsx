@@ -303,9 +303,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ className = "" }) => {
   const currentTotal =
     calculatorInputs.squat + calculatorInputs.bench + calculatorInputs.deadlift;
   const goalTotal =
-    convertWeight(meetGoals.squat?.third || 0, "kg", unitPreference) +
-    convertWeight(meetGoals.bench?.third || 0, "kg", unitPreference) +
-    convertWeight(meetGoals.deadlift?.third || 0, "kg", unitPreference);
+    convertWeight(currentStats.goalSquatMax || 0, "kg", unitPreference) +
+    convertWeight(currentStats.goalBenchMax || 0, "kg", unitPreference) +
+    convertWeight(currentStats.goalDeadliftMax || 0, "kg", unitPreference);
   const wilksScore = calculateWilks(calculatorInputs.bodyweight, currentTotal);
   const dotsScore = calculateDOTS(calculatorInputs.bodyweight, currentTotal);
   const goalWilks = calculateWilks(calculatorInputs.bodyweight, goalTotal);

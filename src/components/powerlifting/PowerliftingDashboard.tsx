@@ -56,7 +56,7 @@ export default function PowerliftingDashboard({
     getAllMeets,
     setActiveMeet,
     deleteMeet,
-    getProgressPercentage
+    getProgressPercentage,
   } = usePowerlifting();
 
   const [quickWeightOpen, setQuickWeightOpen] = useState(false);
@@ -127,32 +127,59 @@ export default function PowerliftingDashboard({
 
   // Calculate competition readiness with new weighting formula
   const calculateCompetitionReadiness = () => {
-    // 80% - Progress toward lift goals
-    const goalTotal =
-      state.meetGoals.squat.third +
-      state.meetGoals.bench.third +
-      state.meetGoals.deadlift.third;
-    const liftProgress =
-      goalTotal > 0 ? Math.min(100, (totalLifts / goalTotal) * 100) : 0;
+    // 80% - Progress toward lift goals using new goal columns
+    const goalSquatMax = state.currentStats.goalSquatMax || 0;
+    const goalBenchMax = state.currentStats.goalBenchMax || 0;
+    const goalDeadliftMax = state.currentStats.goalDeadliftMax || 0;
+    const goalTotal = goalSquatMax + goalBenchMax + goalDeadliftMax;
+
+    let liftProgress = 0;
+    if (goalTotal > 0 && totalLifts >= 0) {
+      liftProgress = Math.min(100, Math.max(0, (totalLifts / goalTotal) * 100));
+    }
 
     // 15% - Progress toward bodyweight goal
-    const weightProgress =
-      state.currentStats.weight <= state.meetInfo.targetWeightClass
-        ? 100
-        : Math.max(
-            0,
-            100 -
-              ((state.currentStats.weight - state.meetInfo.targetWeightClass) /
-                state.meetInfo.targetWeightClass) *
-                100,
-          );
+    let weightProgress = 0;
+    if (state.meetInfo.targetWeightClass > 0 && state.currentStats.weight > 0) {
+      if (state.currentStats.weight <= state.meetInfo.targetWeightClass) {
+        weightProgress = 100;
+      } else {
+        const weightDiff =
+          state.currentStats.weight - state.meetInfo.targetWeightClass;
+        const percentageOver =
+          (weightDiff / state.meetInfo.targetWeightClass) * 100;
+        weightProgress = Math.max(0, 100 - percentageOver);
+      }
+    }
 
     // 5% - Equipment preparation
     const equipmentReadiness = equipmentProgress;
 
-    return Math.round(
-      liftProgress * 0.8 + weightProgress * 0.15 + equipmentReadiness * 0.05,
-    );
+    const readiness =
+      liftProgress * 0.8 + weightProgress * 0.15 + equipmentReadiness * 0.05;
+
+    // Clamp between 0 and 100, handle edge cases
+    const clampedReadiness = Math.min(100, Math.max(0, readiness));
+
+    // Log for debugging if unexpected values
+    if (
+      isNaN(clampedReadiness) ||
+      clampedReadiness === Infinity ||
+      clampedReadiness === -Infinity
+    ) {
+      console.warn("Competition readiness calculation issue:", {
+        liftProgress,
+        weightProgress,
+        equipmentReadiness,
+        totalLifts,
+        goalTotal,
+        readiness,
+        clampedReadiness,
+      });
+      return 0;
+    }
+
+    return Math.round(clampedReadiness);
   };
 
   const competitionReadiness = calculateCompetitionReadiness();
@@ -951,8 +978,11 @@ export default function PowerliftingDashboard({
                             </p>
                             <p className="text-gray-300">
                               ({formatWeight(state.currentStats.squatMax)} ÷{" "}
-                              {formatWeight(state.meetGoals.squat.third)}) × 100
-                              = {Math.round(getProgressPercentage("squat"))}%
+                              {formatWeight(
+                                state.currentStats.goalSquatMax || 0,
+                              )}
+                              ) × 100 ={" "}
+                              {Math.round(getProgressPercentage("squat"))}%
                             </p>
                           </div>
                           <div>
@@ -961,8 +991,11 @@ export default function PowerliftingDashboard({
                             </p>
                             <p className="text-gray-300">
                               ({formatWeight(state.currentStats.benchMax)} ÷{" "}
-                              {formatWeight(state.meetGoals.bench.third)}) × 100
-                              = {Math.round(getProgressPercentage("bench"))}%
+                              {formatWeight(
+                                state.currentStats.goalBenchMax || 0,
+                              )}
+                              ) × 100 ={" "}
+                              {Math.round(getProgressPercentage("bench"))}%
                             </p>
                           </div>
                           <div>
@@ -971,8 +1004,10 @@ export default function PowerliftingDashboard({
                             </p>
                             <p className="text-gray-300">
                               ({formatWeight(state.currentStats.deadliftMax)} ÷{" "}
-                              {formatWeight(state.meetGoals.deadlift.third)}) ×
-                              100 ={" "}
+                              {formatWeight(
+                                state.currentStats.goalDeadliftMax || 0,
+                              )}
+                              ) × 100 ={" "}
                               {Math.round(getProgressPercentage("deadlift"))}%
                             </p>
                           </div>
@@ -980,7 +1015,10 @@ export default function PowerliftingDashboard({
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button className="bg-blue-600 hover:bg-blue-700 w-full">
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700 w-full"
+                        onClick={() => {}}
+                      >
                         Got it!
                       </Button>
                     </DialogFooter>
@@ -1006,27 +1044,33 @@ export default function PowerliftingDashboard({
                   <div className="bg-gray-700/50 p-4 rounded-lg">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-400 mb-1">
-                        {Math.round(
-                          ((state.currentStats.squatMax +
-                            state.currentStats.benchMax +
-                            state.currentStats.deadliftMax) /
-                            (state.meetGoals.squat.third +
-                              state.meetGoals.bench.third +
-                              state.meetGoals.deadlift.third)) *
+                        {(() => {
+                          const goalTotal =
+                            (state.currentStats.goalSquatMax || 0) +
+                            (state.currentStats.goalBenchMax || 0) +
+                            (state.currentStats.goalDeadliftMax || 0);
+                          if (goalTotal <= 0) return 0;
+                          const progress = Math.min(
                             100,
-                        )}
+                            Math.max(0, (totalLifts / goalTotal) * 100),
+                          );
+                          return Math.round(progress);
+                        })()}
                         %
                       </div>
                       <Progress
-                        value={Math.round(
-                          ((state.currentStats.squatMax +
-                            state.currentStats.benchMax +
-                            state.currentStats.deadliftMax) /
-                            (state.meetGoals.squat.third +
-                              state.meetGoals.bench.third +
-                              state.meetGoals.deadlift.third)) *
+                        value={(() => {
+                          const goalTotal =
+                            (state.currentStats.goalSquatMax || 0) +
+                            (state.currentStats.goalBenchMax || 0) +
+                            (state.currentStats.goalDeadliftMax || 0);
+                          if (goalTotal <= 0) return 0;
+                          const progress = Math.min(
                             100,
-                        )}
+                            Math.max(0, (totalLifts / goalTotal) * 100),
+                          );
+                          return Math.round(progress);
+                        })()}
                         className="h-2 my-2"
                       />
                       <p className="text-xs text-gray-400">Lift Goals (80%)</p>

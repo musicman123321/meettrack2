@@ -64,6 +64,12 @@ CREATE TRIGGER trigger_update_current_stats_weight
     FOR EACH ROW
     EXECUTE FUNCTION update_current_stats_weight();
 
+-- Add lift goal columns to current_stats table
+ALTER TABLE public.current_stats
+ADD COLUMN IF NOT EXISTS goal_squat_max numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS goal_bench_max numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS goal_deadlift_max numeric DEFAULT 0;
+
 -- Grant necessary permissions
 GRANT ALL ON public.user_lifts TO authenticated;
 GRANT ALL ON public.user_lifts TO service_role;

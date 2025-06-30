@@ -47,7 +47,7 @@ const PrivacyPolicyPage: React.FC = () => {
                 competition preparation application.
               </p>
               <p className="text-gray-700 leading-relaxed">
-                <strong>Last updated:</strong> January 1, 2025
+                <strong>Last updated:</strong> June 1, 2025
               </p>
               <p className="text-gray-700 leading-relaxed">
                 By using Meet Prep Tracker, you agree to the collection and use

@@ -22,6 +22,9 @@ export interface CurrentStats {
   squatMax: number;
   benchMax: number;
   deadliftMax: number;
+  goalSquatMax?: number;
+  goalBenchMax?: number;
+  goalDeadliftMax?: number;
 }
 
 export interface LiftAttempts {

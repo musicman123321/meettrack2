@@ -79,6 +79,13 @@ export default function SettingsPage({ onBack }: SettingsPageProps) {
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
 
+      // Force a page reload to apply theme changes
+      if (selectedTheme !== (state.userSettings?.theme || "dark")) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+
       toast({
         title: "Settings saved!",
         description:

@@ -249,22 +249,28 @@ export default function LiftTracker() {
                 </div>
               </div>
               <div>
-                <Label className="text-gray-300">Third (105-110%+)</Label>
+                <Label className="text-gray-300">Lift Goal</Label>
                 <Input
                   type="number"
-                  value={attempts.third}
-                  onChange={(e) =>
-                    handleAttemptChange(
-                      lift,
-                      "third",
-                      parseFloat(e.target.value) || 0,
-                    )
+                  value={
+                    (state.currentStats[
+                      `goal${lift.charAt(0).toUpperCase() + lift.slice(1)}Max` as keyof typeof state.currentStats
+                    ] as number) || 0
                   }
+                  onChange={(e) => {
+                    const goalValue = parseFloat(e.target.value) || 0;
+                    const updatedStats = {
+                      ...tempStats,
+                      [`goal${lift.charAt(0).toUpperCase() + lift.slice(1)}Max`]:
+                        goalValue,
+                    };
+                    setTempStats(updatedStats);
+                  }}
                   className="bg-gray-700 border-gray-600 text-white mt-1"
                   step="2.5"
                 />
                 <div className="text-xs text-gray-500 mt-1">
-                  {Math.round((attempts.third / currentMax) * 100)}% of max
+                  Target for competition
                 </div>
               </div>
             </div>
