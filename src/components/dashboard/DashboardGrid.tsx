@@ -33,7 +33,7 @@ const defaultProjects: ProjectCardProps[] = [
         avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Charlie",
       },
     ],
-    dueDate: "2024-04-15",
+    dueDate: "2025-04-15",
   },
   {
     title: "Mobile App Development",
@@ -48,7 +48,7 @@ const defaultProjects: ProjectCardProps[] = [
         avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Eve",
       },
     ],
-    dueDate: "2024-05-01",
+    dueDate: "2025-05-01",
   },
   {
     title: "Marketing Campaign",
@@ -67,7 +67,7 @@ const defaultProjects: ProjectCardProps[] = [
         avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Henry",
       },
     ],
-    dueDate: "2024-03-30",
+    dueDate: "2025-03-30",
   },
 ];
 

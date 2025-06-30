@@ -7,6 +7,7 @@ import Training from "../powerlifting/Training";
 import WeightManagement from "../powerlifting/WeightManagement";
 import EquipmentChecklist from "../powerlifting/EquipmentChecklist";
 import Analytics from "../powerlifting/Analytics";
+import MeetManagement from "../powerlifting/MeetManagement";
 import SettingsPage from "./SettingsPage";
 import HelpContactForm from "./HelpContactForm";
 import { PowerliftingProvider } from "../../contexts/PowerliftingContext";
@@ -26,7 +27,7 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
-        return <PowerliftingDashboard />;
+        return <PowerliftingDashboard onNavigate={setActiveView} />;
       case "lifts":
         return <LiftTracker />;
       case "training":
@@ -37,10 +38,12 @@ const Dashboard = () => {
         return <EquipmentChecklist />;
       case "analytics":
         return <Analytics />;
+      case "meets":
+        return <MeetManagement />;
       case "settings":
         return <SettingsPage onBack={() => setActiveView("dashboard")} />;
       default:
-        return <PowerliftingDashboard />;
+        return <PowerliftingDashboard onNavigate={setActiveView} />;
     }
   };
 

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import TrainingProgressBar from "@/components/powerlifting/TrainingProgressBar";
 import {
   Card,
   CardContent,
@@ -29,199 +31,165 @@ import { useAuth } from "../../../supabase/auth";
 import { supabase } from "../../../supabase/supabase";
 import { toast } from "@/components/ui/use-toast";
 import { analytics } from "@/utils/analytics";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 // Support Donation Component
-function SupportDonation() {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState(5);
-  const [customAmount, setCustomAmount] = useState("");
-  const [showCustom, setShowCustom] = useState(false);
-
-  const donationAmounts = [5, 10, 25, 50];
-
-  const handleDonation = async (amount: number) => {
-    // Track donation click
-    analytics.trackDonationClick(amount);
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "supabase-functions-create-checkout",
-        {
-          body: {
-            productPriceId: "donation", // This would need to be configured in Polar.sh
-            successUrl: `${window.location.origin}/success?type=donation&amount=${amount}`,
-            customerEmail: user?.email || "anonymous@example.com",
-            metadata: {
-              type: "donation",
-              amount: amount,
-              source: "homepage",
-            },
-          },
-        },
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (error: any) {
-      console.error("Donation error:", error);
-      analytics.trackError("donation_failed", error.message);
-      toast({
-        title: "Unable to process donation",
-        description:
-          "Please try again later or contact support at meettrackdev@gmail.com",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+function SupportDonation({ isTestMode = false }) {
+  // Configuration for different environments
+  const config = {
+    production: {
+      url: "https://www.paypal.com/donate",
+      buttonId: "ULFDFJDS9B6EU"
+    },
+    sandbox: {
+      url: "https://www.sandbox.paypal.com/donate", 
+      buttonId: "Y7DU3PFDUFY6W" // Your new sandbox button ID
     }
   };
 
-  const handleCustomAmountChange = (value: string) => {
-    setCustomAmount(value);
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue > 0) {
-      setSelectedAmount(numValue);
-    }
-  };
-
-  const getDonationAmount = () => {
-    if (showCustom && customAmount) {
-      const amount = parseFloat(customAmount);
-      return !isNaN(amount) && amount > 0 ? amount : selectedAmount;
-    }
-    return selectedAmount;
-  };
+  const currentConfig = isTestMode ? config.sandbox : config.production;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {/* Test Mode Indicator */}
+      {isTestMode && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-center mb-2">
+            <span className="text-lg mr-2">🧪</span>
+            <h3 className="font-semibold text-yellow-800">SANDBOX MODE</h3>
+          </div>
+          <p className="text-yellow-700 text-sm">
+            Test payments only - no real money will be charged
+          </p>
+          <div className="mt-2 text-xs text-yellow-600">
+            Button ID: {currentConfig.buttonId}
+          </div>
+        </div>
+      )}
+
       <Card className="bg-white border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="text-center pb-6">
           <div className="mx-auto w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center mb-4">
             <Heart className="h-8 w-8 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
-            Support Our Development
+            Support Independent Development
           </CardTitle>
           <CardDescription className="text-gray-600 text-lg">
-            Help us continue improving Meet Prep Tracker with your contribution
+            Help keep Meet Prep Tracker free and growing
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 px-8 pb-8">
-          {/* Preset Amounts */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-gray-900 text-center">
-              Choose an amount
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {donationAmounts.map((amount) => (
-                <Button
-                  key={amount}
-                  variant={
-                    selectedAmount === amount && !showCustom
-                      ? "default"
-                      : "outline"
-                  }
-                  onClick={() => {
-                    setSelectedAmount(amount);
-                    setShowCustom(false);
-                    setCustomAmount("");
-                  }}
-                  className={
-                    selectedAmount === amount && !showCustom
-                      ? "bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-md"
-                      : "border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-                  }
-                  size="lg"
-                >
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  {amount}
-                </Button>
-              ))}
-            </div>
+        <CardContent className="px-8 pb-8">
+          {/* Why Donate Section */}
+          <div className="mb-6 text-center">
+            <p className="text-gray-700 mb-4">
+              Meet Prep Tracker is built and maintained by <strong>one developer</strong> who's passionate about powerlifting. 
+              Your donation directly supports:
+            </p>
+            <ul className="text-left list-disc pl-5 space-y-2 text-gray-600 mb-6 max-w-md mx-auto">
+              <li>Server costs and hosting fees</li>
+              <li>New feature development</li>
+              <li>Bug fixes and maintenance</li>
+            </ul>
+            <p className="text-gray-700 font-medium">
+              Every contribution makes a difference! ❤️
+            </p>
           </div>
 
-          {/* Custom Amount Toggle */}
-          <div className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowCustom(!showCustom);
-                if (!showCustom) {
-                  setCustomAmount("");
-                }
-              }}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              {showCustom ? "Choose preset amount" : "Enter custom amount"}
-            </Button>
-          </div>
-
-          {/* Custom Amount Input */}
-          {showCustom && (
-            <div className="space-y-2">
-              <Label
-                htmlFor="custom-amount"
-                className="text-gray-700 font-medium"
+          {/* PayPal Donation Button */}
+          <div className="text-center mb-6">
+            {isTestMode ? (
+              // Sandbox: Use direct payment form instead of hosted button
+              <form 
+                action="https://www.sandbox.paypal.com/cgi-bin/webscr"
+                method="post" 
+                target="_blank"
+                className="inline-block"
               >
-                Custom Amount ($)
-              </Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  id="custom-amount"
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={customAmount}
-                  onChange={(e) => handleCustomAmountChange(e.target.value)}
-                  placeholder="Enter amount"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Donation Button */}
-          <Button
-            onClick={() => handleDonation(getDonationAmount())}
-            disabled={
-              loading ||
-              (showCustom && (!customAmount || parseFloat(customAmount) <= 0))
-            }
-            className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-semibold py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            size="lg"
-          >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Processing...
-              </div>
+                <input type="hidden" name="cmd" value="_donations" />
+                <input type="hidden" name="business" value="sb-uep2344222452@business.example.com" />
+                <input type="hidden" name="item_name" value="Meet Prep Tracker Support" />
+                <input type="hidden" name="currency_code" value="USD" />
+                <input type="hidden" name="no_note" value="0" />
+                <input type="hidden" name="no_shipping" value="1" />
+                <input type="hidden" name="return" value="https://your-site.com/thank-you" />
+                <input type="hidden" name="cancel_return" value="https://your-site.com/cancelled" />
+                <button 
+                  type="submit" 
+                  className="border-0 bg-transparent p-0 hover:scale-105 transition-transform"
+                >
+                  <img 
+                    src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" 
+                    alt="Donate with PayPal button"
+                    className="h-12 w-auto" 
+                  />
+                </button>
+              </form>
             ) : (
-              `Donate ${getDonationAmount()}`
+              // Production: Use your working hosted button
+              <form 
+                action={currentConfig.url}
+                method="post" 
+                target="_blank"
+                className="inline-block"
+              >
+                <input type="hidden" name="hosted_button_id" value={currentConfig.buttonId} />
+                <button 
+                  type="submit" 
+                  className="border-0 bg-transparent p-0 hover:scale-105 transition-transform"
+                >
+                  <img 
+                    src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" 
+                    alt="Donate with PayPal button"
+                    className="h-12 w-auto" 
+                  />
+                </button>
+              </form>
             )}
-          </Button>
+          </div>
 
-          {/* Security Note */}
+          {/* Security & Transparency */}
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-500">
-              🔒 Secure payment powered by Polar.sh
+              🔒 100% secure payment processed by PayPal
             </p>
             <p className="text-xs text-gray-400">
-              100% optional • Your support helps us maintain and improve the
-              platform
+              {isTestMode 
+                ? "Sandbox environment - test payments only" 
+                : "You'll be redirected to PayPal's trusted platform"
+              }
             </p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Testing Instructions (only show in test mode) */}
+      {isTestMode && (
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-semibold text-blue-800 mb-2">Testing Instructions</h4>
+          <ol className="text-blue-700 text-sm space-y-1 list-decimal list-inside">
+            <li>Click the "Donate with PayPal" button above</li>
+            <li>You'll be redirected to sandbox.paypal.com</li>
+            <li>Log in with a sandbox personal account</li>
+            <li>Complete the mock donation</li>
+            <li>Check your sandbox business account for the transaction</li>
+          </ol>
+          <div className="mt-3 p-3 bg-white rounded border text-sm">
+            <p className="font-medium text-gray-700">Need a test account?</p>
+            <p className="text-gray-600 text-xs">
+              Create one at{" "}
+              <a 
+                href="https://developer.paypal.com/dashboard/accounts" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+              >
+                developer.paypal.com
+              </a>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -366,7 +334,7 @@ export default function Home() {
             lifts, manage your weight cut, and ensure you're ready to dominate
             on meet day.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col gap-6 justify-center items-center">
             {user ? (
               <Link to="/dashboard">
                 <Button
@@ -378,13 +346,13 @@ export default function Home() {
                 </Button>
               </Link>
             ) : (
-              <>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link to="/signup" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     className="bg-red-600 hover:bg-red-700 text-white text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
                   >
-                    Start Free Trial
+                    Sign Up
                     <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </Link>
@@ -397,7 +365,7 @@ export default function Home() {
                     Sign In
                   </Button>
                 </Link>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -413,25 +381,45 @@ export default function Home() {
               Comprehensive tools designed specifically for powerlifting
               competition preparation
             </p>
+            {!user && (
+              <p className="text-base text-gray-500 mt-4 max-w-xl mx-auto">
+                Get a preview of what your dashboard will look like. Click any
+                card to start your journey!
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {features.map((feature, index) => (
-              <Card
+              <motion.div
                 key={index}
-                className="bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md h-full"
+                whileHover={{ scale: 1.02, y: -5 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
               >
-                <CardHeader className="pb-4">
-                  <div className="mb-4">{feature.icon}</div>
-                  <CardTitle className="text-gray-900 text-lg sm:text-xl">
-                    {feature.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
+                <Card
+                  className={`bg-white border-gray-200 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-lg h-full group ${
+                    !user ? "cursor-pointer" : ""
+                  }`}
+                  onClick={
+                    !user ? () => (window.location.href = "/signup") : undefined
+                  }
+                >
+                  <CardHeader className="pb-4">
+                    <div className="mb-4 transform group-hover:scale-110 transition-transform duration-200">
+                      {feature.icon}
+                    </div>
+                    <CardTitle className="text-gray-900 text-lg sm:text-xl group-hover:text-red-600 transition-colors">
+                      {feature.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-gray-600 text-sm sm:text-base leading-relaxed mb-4">
+                      {feature.description}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -531,7 +519,7 @@ export default function Home() {
                 size="lg"
                 className="bg-white text-red-600 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold"
               >
-                Start Your Free Trial
+                Sign Up
                 <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </Link>
@@ -571,7 +559,7 @@ export default function Home() {
           </div>
           <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200 text-center text-gray-600 text-sm sm:text-base">
             <p>
-              &copy; 2024 Meet Prep Tracker. Built for powerlifters, by
+              &copy; 2025 Meet Prep Tracker. Built for powerlifters, by
               powerlifters.
             </p>
             <p className="mt-2 text-xs text-gray-500">

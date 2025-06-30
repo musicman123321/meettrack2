@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
   useState,
+  useCallback,
 } from "react";
 import {
   PowerliftingState,
@@ -39,24 +40,24 @@ type PowerliftingAction =
 
 const initialState: PowerliftingState = {
   meetInfo: {
-    meetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
-    targetWeightClass: 83,
+    meetDate: new Date(), // Current date instead of 90 days from now
+    targetWeightClass: 0,
     meetName: "",
     location: "",
   },
   currentStats: {
-    weight: 80,
-    squatMax: 140,
-    benchMax: 100,
-    deadliftMax: 180,
+    weight: 0,
+    squatMax: 0,
+    benchMax: 0,
+    deadliftMax: 0,
   },
   meetGoals: {
-    squat: { opener: 125, second: 140, third: 150, confidence: 8 },
-    bench: { opener: 90, second: 100, third: 107.5, confidence: 7 },
-    deadlift: { opener: 162.5, second: 180, third: 190, confidence: 9 },
+    squat: { opener: 0, second: 0, third: 0, confidence: 10 },
+    bench: { opener: 0, second: 0, third: 0, confidence: 10 },
+    deadlift: { opener: 0, second: 0, third: 0, confidence: 10 },
   },
   equipmentChecklist: DEFAULT_EQUIPMENT,
-  weightHistory: [{ date: new Date().toISOString().split("T")[0], weight: 80 }],
+  weightHistory: [],
   unitPreference: "kg",
 };
 
@@ -144,8 +145,18 @@ interface PowerliftingContextType {
   ) => number;
   formatWeight: (weight: number, unit?: "kg" | "lbs") => string;
   addTrainingEntry: (entry: TrainingFormData) => Promise<void>;
-  getTrainingHistory: (days?: number) => Promise<TrainingEntry[]>;
-  getTrainingAnalytics: (days?: number) => Promise<TrainingAnalytics>;
+  getTrainingHistory: (
+    days?: number,
+    forceRefresh?: boolean,
+  ) => Promise<TrainingEntry[]>;
+  getTrainingAnalytics: (
+    days?: number,
+    forceRefresh?: boolean,
+  ) => Promise<TrainingAnalytics>;
+  clearCache: () => void;
+  getAllMeets: () => Promise<any[]>;
+  setActiveMeet: (meetId: string) => Promise<void>;
+  deleteMeet: (meetId: string) => Promise<void>;
 }
 
 const PowerliftingContext = createContext<PowerliftingContextType | undefined>(
@@ -157,6 +168,58 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+
+  // Cache management
+  const CACHE_KEYS = {
+    TRAINING_HISTORY: "powerlifting_training_history",
+    ANALYTICS: "powerlifting_analytics",
+    USER_DATA: "powerlifting_user_data",
+    MEETS_LIST: "powerlifting_meets_list",
+  };
+  const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+  // Cache utilities
+  const getCachedData = useCallback(
+    (key: string) => {
+      try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            debugLog(`Using cached data for key: ${key}`);
+            return data;
+          }
+          localStorage.removeItem(key);
+          debugLog(`Cache expired for key: ${key}`);
+        }
+      } catch (error) {
+        console.warn("Cache read error:", error);
+      }
+      return null;
+    },
+    [CACHE_DURATION],
+  );
+
+  const setCachedData = useCallback((key: string, data: any) => {
+    try {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          data,
+          timestamp: Date.now(),
+        }),
+      );
+      debugLog(`Data cached for key: ${key}`);
+    } catch (error) {
+      console.warn("Cache write error:", error);
+    }
+  }, []);
+
+  const clearCache = useCallback(() => {
+    Object.values(CACHE_KEYS).forEach((key) => {
+      localStorage.removeItem(key);
+    });
+  }, []);
 
   // Debug logging function
   const debugLog = (message: string, data?: any) => {
@@ -170,11 +233,23 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
   };
 
   // Fetch user data from Supabase
-  const fetchUserData = async () => {
+  const fetchUserData = async (forceRefresh = false) => {
     if (!user?.id) {
       debugLog("No user found, skipping data fetch");
       setLoading(false);
       return;
+    }
+
+    // Check cache first unless force refresh
+    const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+    if (!forceRefresh) {
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        debugLog("Using cached user data");
+        dispatch({ type: "LOAD_STATE", payload: cachedData });
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -232,16 +307,18 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       }
       debugLog("Current stats fetched:", currentStatsData);
 
-      // Fetch active meet
+      // Fetch active meet (get the most recent one if multiple exist)
       debugLog("Fetching active meet...");
       const { data: meetData, error: meetError } = await supabase
         .from("meets")
         .select("*")
         .eq("user_id", user.id)
         .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (meetError) {
+      if (meetError && meetError.code !== "PGRST116") {
         errorLog("Error fetching meet data", meetError);
         throw new Error(`Failed to fetch meet data: ${meetError.message}`);
       }
@@ -338,6 +415,10 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       };
 
       debugLog("Successfully fetched user data:", newState);
+
+      // Cache the fetched data
+      setCachedData(cacheKey, newState);
+
       dispatch({ type: "LOAD_STATE", payload: newState });
     } catch (err: any) {
       errorLog("Error fetching user data", err);
@@ -346,24 +427,54 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Transform meet goals from database format
-  const transformMeetGoalsFromDB = (goalsData: any[]): MeetGoals => {
+  // Transform meet goals from database format, with fallback to user_lifts
+  const transformMeetGoalsFromDB = (
+    goalsData: any[],
+    userLiftsData: any[] = [],
+  ): MeetGoals => {
     const goals: MeetGoals = {
-      squat: { opener: 125, second: 140, third: 150, confidence: 8 },
-      bench: { opener: 90, second: 100, third: 107.5, confidence: 7 },
-      deadlift: { opener: 162.5, second: 180, third: 190, confidence: 9 },
+      squat: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+      bench: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
+      deadlift: { opener: 0.0, second: 0.0, third: 0.0, confidence: 10 },
     };
 
-    goalsData.forEach((goal) => {
-      if (goal.lift_type in goals) {
-        goals[goal.lift_type as keyof MeetGoals] = {
-          opener: goal.opener,
-          second: goal.second,
-          third: goal.third,
-          confidence: goal.confidence,
-        };
+    try {
+      // First, apply meet goals if available
+      if (goalsData && Array.isArray(goalsData)) {
+        goalsData.forEach((goal) => {
+          if (goal.lift_type in goals) {
+            goals[goal.lift_type as keyof MeetGoals] = {
+              opener: goal.opener,
+              second: goal.second,
+              third: goal.third,
+              confidence: goal.confidence,
+            };
+          }
+        });
       }
-    });
+
+      // Then, fallback to user_lifts data for confidence and max weights
+      if (userLiftsData && Array.isArray(userLiftsData)) {
+        userLiftsData.forEach((lift) => {
+          if (lift.lift_type in goals) {
+            const currentGoal = goals[lift.lift_type as keyof MeetGoals];
+            // Update confidence from user_lifts if available
+            if (lift.confidence) {
+              currentGoal.confidence = lift.confidence;
+            }
+            // If no meet goals exist, generate reasonable attempts based on max weight
+            if ((!goalsData || goalsData.length === 0) && lift.max_weight > 0) {
+              const maxWeight = lift.max_weight;
+              currentGoal.opener = Math.round(maxWeight * 0.85 * 4) / 4; // 85% rounded to nearest 2.5
+              currentGoal.second = Math.round(maxWeight * 0.95 * 4) / 4; // 95% rounded to nearest 2.5
+              currentGoal.third = Math.round(maxWeight * 1.05 * 4) / 4; // 105% rounded to nearest 2.5
+            }
+          }
+        });
+      }
+    } catch (err) {
+      errorLog("Error transforming meet goals from DB", err);
+    }
 
     return goals;
   };
@@ -415,6 +526,84 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "LOAD_STATE", payload: initialState });
     }
   }, [user]);
+
+  // Add meet management functions
+  const getAllMeets = async () => {
+    if (!user?.id) return [];
+
+    const cacheKey = `${CACHE_KEYS.MEETS_LIST}_${user.id}`;
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("meets")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new Error(`Failed to fetch meets: ${error.message}`);
+      }
+
+      setCachedData(cacheKey, data || []);
+      return data || [];
+    } catch (err: any) {
+      errorLog("Error fetching meets", err);
+      return [];
+    }
+  };
+
+  const setActiveMeet = async (meetId: string) => {
+    if (!user?.id) return;
+
+    try {
+      // Set all meets to inactive
+      await supabase
+        .from("meets")
+        .update({ is_active: false })
+        .eq("user_id", user.id);
+
+      // Set the selected meet to active
+      await supabase
+        .from("meets")
+        .update({ is_active: true })
+        .eq("id", meetId)
+        .eq("user_id", user.id);
+
+      // Clear caches and refresh data
+      clearCache();
+      await fetchUserData(true);
+    } catch (err: any) {
+      errorLog("Error setting active meet", err);
+      throw err;
+    }
+  };
+
+  const deleteMeet = async (meetId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from("meets")
+        .delete()
+        .eq("id", meetId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw new Error(`Failed to delete meet: ${error.message}`);
+      }
+
+      // Clear caches and refresh data
+      clearCache();
+      await fetchUserData(true);
+    } catch (err: any) {
+      errorLog("Error deleting meet", err);
+      throw err;
+    }
+  };
 
   const calculateWilks = (
     total: number,
@@ -523,6 +712,17 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw updateError;
       }
 
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedCacheData = {
+          ...cachedData,
+          currentStats: stats,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
+
       debugLog("Successfully saved current stats");
       dispatch({ type: "SET_CURRENT_STATS", payload: stats });
     } catch (err: any) {
@@ -577,6 +777,17 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to save meet goals: ${error.message}`);
       }
 
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedCacheData = {
+          ...cachedData,
+          meetGoals: goals,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
+
       debugLog("Successfully saved meet goals");
       dispatch({ type: "SET_MEET_GOALS", payload: goals });
     } catch (err: any) {
@@ -593,24 +804,46 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
     try {
       debugLog("Saving meet info:", info);
-      const { error } = await supabase.from("meets").upsert({
+
+      // First, set all existing meets to inactive
+      await supabase
+        .from("meets")
+        .update({ is_active: false })
+        .eq("user_id", user.id);
+
+      // Then insert the new meet as active
+      const { error } = await supabase.from("meets").insert({
         user_id: user.id,
         meet_name: info.meetName || "",
         meet_date: info.meetDate.toISOString().split("T")[0],
         location: info.location || "",
         target_weight_class: info.targetWeightClass,
         is_active: true,
-        updated_at: new Date().toISOString(),
       });
 
       if (error) {
         throw new Error(`Failed to save meet info: ${error.message}`);
       }
 
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedCacheData = {
+          ...cachedData,
+          meetInfo: info,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
+
       debugLog("Successfully saved meet info");
       dispatch({ type: "SET_MEET_INFO", payload: info });
+
+      // Force a complete data refresh after saving meet info
+      await fetchUserData(true);
     } catch (err: any) {
       errorLog("Error saving meet info", err);
+      throw err;
     }
   };
 
@@ -623,20 +856,73 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
     try {
       debugLog("Adding weight entry:", entry);
-      const { error } = await supabase.from("weight_history").insert({
-        user_id: user.id,
-        weight: entry.weight,
-        date: entry.date,
-      });
 
-      if (error) {
-        throw new Error(`Failed to add weight entry: ${error.message}`);
+      // First check if an entry already exists for this date
+      const { data: existingEntry, error: fetchError } = await supabase
+        .from("weight_history")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", entry.date)
+        .maybeSingle();
+
+      if (fetchError) {
+        throw new Error(
+          `Failed to check for existing weight entry: ${fetchError.message}`,
+        );
       }
 
-      debugLog("Successfully added weight entry");
+      if (existingEntry) {
+        // Update existing entry
+        const { error: updateError } = await supabase
+          .from("weight_history")
+          .update({ weight: entry.weight })
+          .eq("id", existingEntry.id);
+
+        if (updateError) {
+          throw new Error(
+            `Failed to update weight entry: ${updateError.message}`,
+          );
+        }
+      } else {
+        // Insert new entry
+        const { error: insertError } = await supabase
+          .from("weight_history")
+          .insert({
+            user_id: user.id,
+            weight: entry.weight,
+            date: entry.date,
+          });
+
+        if (insertError) {
+          throw new Error(`Failed to add weight entry: ${insertError.message}`);
+        }
+      }
+
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedWeightHistory = [...cachedData.weightHistory];
+        const existingIndex = updatedWeightHistory.findIndex(
+          (w) => w.date === entry.date,
+        );
+        if (existingIndex >= 0) {
+          updatedWeightHistory[existingIndex] = entry;
+        } else {
+          updatedWeightHistory.unshift(entry);
+        }
+        const updatedCacheData = {
+          ...cachedData,
+          weightHistory: updatedWeightHistory,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
+
+      debugLog("Successfully added/updated weight entry");
       dispatch({ type: "ADD_WEIGHT_ENTRY", payload: entry });
     } catch (err: any) {
       errorLog("Error adding weight entry", err);
+      throw err;
     }
   };
 
@@ -664,6 +950,20 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to toggle equipment: ${error.message}`);
       }
 
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        const updatedEquipment = cachedData.equipmentChecklist.map((item) =>
+          item.id === itemId ? { ...item, checked: !item.checked } : item,
+        );
+        const updatedCacheData = {
+          ...cachedData,
+          equipmentChecklist: updatedEquipment,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
+
       debugLog("Successfully toggled equipment item");
       dispatch({ type: "TOGGLE_EQUIPMENT", payload: itemId });
     } catch (err: any) {
@@ -687,6 +987,10 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       };
 
       await saveCurrentStats(updatedStats);
+
+      // Force a complete data refresh to ensure UI consistency
+      await fetchUserData(true);
+
       debugLog("Successfully updated current weight");
     } catch (err: any) {
       errorLog("Error updating current weight", err);
@@ -746,6 +1050,18 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SET_USER_SETTINGS", payload: data });
       }
 
+      // Update cache with new data immediately
+      const cacheKey = `${CACHE_KEYS.USER_DATA}_${user.id}`;
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData && data) {
+        const updatedCacheData = {
+          ...cachedData,
+          userSettings: data,
+          unitPreference: data.weight_unit,
+        };
+        setCachedData(cacheKey, updatedCacheData);
+      }
+
       debugLog("Successfully saved user settings");
     } catch (err: any) {
       errorLog("Error saving user settings", err);
@@ -780,7 +1096,7 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
     return `${convertedWeight}${displayUnit}`;
   };
 
-  // Add training entry to Supabase
+  // Add training entry to Supabase and clear cache
   const addTrainingEntry = async (entry: TrainingFormData) => {
     if (!user?.id) {
       errorLog("No user found when adding training entry", null);
@@ -789,6 +1105,8 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
     try {
       debugLog("Adding training entry:", entry);
+
+      // Don't include volume and estimated_1rm as they are generated columns
       const { error } = await supabase.from("training_history").insert({
         user_id: user.id,
         lift_type: entry.lift_type,
@@ -803,24 +1121,42 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to add training entry: ${error.message}`);
       }
 
-      debugLog("Successfully added training entry");
+      // Clear relevant caches to force refresh
+      Object.values(CACHE_KEYS).forEach((key) => {
+        const keys = Object.keys(localStorage).filter((k) => k.startsWith(key));
+        keys.forEach((k) => localStorage.removeItem(k));
+      });
+
+      debugLog("Successfully added training entry and cleared cache");
     } catch (err: any) {
       errorLog("Error adding training entry", err);
       throw err;
     }
   };
 
-  // Get training history from Supabase
+  // Get training history from Supabase with caching
   const getTrainingHistory = async (
     days: number = 30,
+    forceRefresh: boolean = false,
   ): Promise<TrainingEntry[]> => {
     if (!user?.id) {
       errorLog("No user found when fetching training history", null);
       return [];
     }
 
+    const cacheKey = `${CACHE_KEYS.TRAINING_HISTORY}_${user.id}_${days}`;
+
+    // Check cache first unless force refresh
+    if (!forceRefresh) {
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        debugLog("Using cached training history");
+        return cachedData;
+      }
+    }
+
     try {
-      debugLog("Fetching training history for last", days, "days");
+      debugLog("Fetching training history for last", days);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
@@ -835,17 +1171,51 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to fetch training history: ${error.message}`);
       }
 
-      debugLog("Successfully fetched training history:", data);
-      return data || [];
+      // Calculate volume and estimated 1RM for each entry
+      const processedData = (data || []).map((entry) => ({
+        ...entry,
+        volume: entry.volume || entry.sets * entry.reps * entry.weight,
+        estimated_1rm:
+          entry.estimated_1rm || entry.weight * (1 + entry.reps / 30),
+      }));
+
+      // Cache the processed data
+      setCachedData(cacheKey, processedData);
+
+      debugLog(
+        "Successfully fetched and cached training history:",
+        processedData,
+      );
+      return processedData;
     } catch (err: any) {
       errorLog("Error fetching training history", err);
       return [];
     }
   };
 
-  // Get training analytics from Supabase
+  // Get training analytics from Supabase with caching
+  // Helper types for cleaner code
+  type LiftVolumes = {
+    squat: number;
+    bench: number;
+    deadlift: number;
+  };
+
+  type LiftVolumesWithTotal = LiftVolumes & {
+    total: number;
+  };
+
+  type DatedLiftVolumes = LiftVolumes & {
+    date: string;
+  };
+
+  type WeeklyLiftVolumes = LiftVolumesWithTotal & {
+    week: string;
+  };
+
   const getTrainingAnalytics = async (
     days: number = 90,
+    forceRefresh: boolean = false,
   ): Promise<TrainingAnalytics> => {
     if (!user?.id) {
       errorLog("No user found when fetching training analytics", null);
@@ -856,8 +1226,19 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
       };
     }
 
+    const cacheKey = `${CACHE_KEYS.ANALYTICS}_${user.id}_${days}`;
+
+    // Check cache first unless force refresh
+    if (!forceRefresh) {
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        debugLog("Using cached analytics data");
+        return cachedData;
+      }
+    }
+
     try {
-      debugLog("Fetching training analytics for last", days, "days");
+      debugLog(`Fetching training analytics for last ${days} days`);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
@@ -872,94 +1253,101 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to fetch training analytics: ${error.message}`);
       }
 
-      debugLog("Successfully fetched training analytics data:", data);
+      debugLog("Successfully fetched training analytics data", data);
 
       // Process data for analytics
-      const entries = data || [];
+      const entries = (data || []).map((entry) => ({
+        ...entry,
+        volume: entry.volume || entry.sets * entry.reps * entry.weight,
+        estimated_1rm:
+          entry.estimated_1rm || entry.weight * (1 + entry.reps / 30),
+      }));
+
       const analytics: TrainingAnalytics = {
         volumeProgression: [],
         estimatedMaxProgression: [],
         weeklyVolume: [],
       };
 
-      // Group by date for volume and 1RM progression
-      const dateGroups = entries.reduce(
+      // Group by date for volume progression
+      const dateGroups = entries.reduce<Record<string, LiftVolumes>>(
         (acc, entry) => {
           const date = entry.training_date;
+          const liftType = entry.lift_type as keyof LiftVolumes;
+
           if (!acc[date]) {
             acc[date] = { squat: 0, bench: 0, deadlift: 0 };
           }
-          acc[date][entry.lift_type] += entry.volume || 0;
+
+          acc[date][liftType] += entry.volume || 0;
           return acc;
         },
-        {} as Record<
-          string,
-          { squat: number; bench: number; deadlift: number }
-        >,
+        {},
       );
 
       // Volume progression
-      analytics.volumeProgression = Object.entries(dateGroups).map(
-        ([date, volumes]) => ({
-          date,
-          ...volumes,
-        }),
-      );
+      analytics.volumeProgression = Object.entries(
+        dateGroups,
+      ).map<DatedLiftVolumes>(([date, volumes]) => ({
+        date,
+        ...volumes,
+      }));
 
       // Estimated 1RM progression (take max per day per lift)
-      const maxGroups = entries.reduce(
+      const maxGroups = entries.reduce<Record<string, LiftVolumes>>(
         (acc, entry) => {
           const date = entry.training_date;
+          const liftType = entry.lift_type as keyof LiftVolumes;
+
           if (!acc[date]) {
             acc[date] = { squat: 0, bench: 0, deadlift: 0 };
           }
-          acc[date][entry.lift_type] = Math.max(
-            acc[date][entry.lift_type],
-            entry.estimated_1rm || 0,
-          );
+
+          const estimated1rm =
+            entry.estimated_1rm || entry.weight * (1 + entry.reps / 30);
+          acc[date][liftType] = Math.max(acc[date][liftType], estimated1rm);
           return acc;
         },
-        {} as Record<
-          string,
-          { squat: number; bench: number; deadlift: number }
-        >,
+        {},
       );
 
-      analytics.estimatedMaxProgression = Object.entries(maxGroups).map(
-        ([date, maxes]) => ({
-          date,
-          ...maxes,
-        }),
-      );
+      analytics.estimatedMaxProgression = Object.entries(
+        maxGroups,
+      ).map<DatedLiftVolumes>(([date, maxes]) => ({
+        date,
+        ...maxes,
+      }));
 
       // Weekly volume (group by week)
-      const weekGroups = entries.reduce(
+      const weekGroups = entries.reduce<Record<string, LiftVolumesWithTotal>>(
         (acc, entry) => {
           const date = new Date(entry.training_date);
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay());
           const weekKey = weekStart.toISOString().split("T")[0];
+          const liftType = entry.lift_type as keyof LiftVolumes;
 
           if (!acc[weekKey]) {
             acc[weekKey] = { squat: 0, bench: 0, deadlift: 0, total: 0 };
           }
+
           const volume = entry.volume || 0;
-          acc[weekKey][entry.lift_type] += volume;
+          acc[weekKey][liftType] += volume;
           acc[weekKey].total += volume;
           return acc;
         },
-        {} as Record<
-          string,
-          { squat: number; bench: number; deadlift: number; total: number }
-        >,
+        {},
       );
 
-      analytics.weeklyVolume = Object.entries(weekGroups).map(
-        ([week, volumes]) => ({
-          week,
-          ...volumes,
-        }),
-      );
+      analytics.weeklyVolume = Object.entries(
+        weekGroups,
+      ).map<WeeklyLiftVolumes>(([week, volumes]) => ({
+        week,
+        ...volumes,
+      }));
+
+      // Cache the analytics data
+      setCachedData(cacheKey, analytics);
 
       return analytics;
     } catch (err: any) {
@@ -974,7 +1362,8 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
 
   // Refresh all data
   const refreshData = async () => {
-    await fetchUserData();
+    clearCache();
+    await fetchUserData(true);
   };
 
   return (
@@ -1002,6 +1391,10 @@ export function PowerliftingProvider({ children }: { children: ReactNode }) {
         addTrainingEntry,
         getTrainingHistory,
         getTrainingAnalytics,
+        clearCache,
+        getAllMeets,
+        setActiveMeet,
+        deleteMeet,
       }}
     >
       {children}

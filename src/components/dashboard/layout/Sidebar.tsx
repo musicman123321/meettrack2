@@ -11,6 +11,7 @@ import {
   Settings,
   HelpCircle,
   Dumbbell,
+  Calendar,
 } from "lucide-react";
 import { usePowerlifting } from "@/contexts/PowerliftingContext";
 
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { icon: <Scale size={18} />, label: "Weight Management", key: "weight" },
   { icon: <CheckSquare size={18} />, label: "Equipment", key: "equipment" },
   { icon: <BarChart3 size={18} />, label: "Analytics", key: "analytics" },
+  { icon: <Calendar size={18} />, label: "Meet Management", key: "meets" },
 ];
 
 const bottomItems: NavItem[] = [

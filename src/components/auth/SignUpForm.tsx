@@ -12,7 +12,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useNavigate, Link } from "react-router-dom";
 import AuthLayout from "./AuthLayout";
-import { UserPlus } from "lucide-react";
+import { UserPlus, CheckCircle, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function SignUpForm() {
@@ -20,6 +20,7 @@ export default function SignUpForm() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,12 +29,12 @@ export default function SignUpForm() {
     e.preventDefault();
     try {
       await signUp(email, password, fullName);
+      setIsSuccess(true);
       toast({
         title: "Account created successfully",
         description: "Please check your email to verify your account.",
         variant: "default",
       });
-      navigate("/login");
     } catch (error: any) {
       const message = error?.message || "Error creating account";
       setError(message);
@@ -44,6 +45,51 @@ export default function SignUpForm() {
       });
     }
   };
+
+  if (isSuccess) {
+    return (
+      <AuthLayout>
+        <Card className="w-full">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center flex items-center justify-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" /> Account
+              Created!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="flex justify-center">
+              <Mail className="h-16 w-16 text-blue-500" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-lg font-medium text-slate-900">
+                A verification link has been sent to your email.
+              </p>
+              <p className="text-sm text-slate-600">
+                Please verify your account before logging in.
+              </p>
+              <p className="text-sm text-slate-500">
+                Check your email at: <strong>{email}</strong>
+              </p>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button onClick={() => navigate("/login")} className="w-full">
+              Go to Login
+            </Button>
+            <div className="text-sm text-center text-slate-600">
+              Didn't receive the email?{" "}
+              <button
+                onClick={() => setIsSuccess(false)}
+                className="text-primary hover:underline"
+              >
+                Try again
+              </button>
+            </div>
+          </CardFooter>
+        </Card>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout>
