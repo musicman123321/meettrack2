@@ -128,15 +128,15 @@ const TopNavigation = ({
             >
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
-                  alt={user.email || ""}
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=demo@meettrack.com`}
+                  alt="demo@meettrack.com"
                 />
                 <AvatarFallback className="bg-red-600 text-white">
-                  {user.email?.[0].toUpperCase()}
+                  D
                 </AvatarFallback>
               </Avatar>
               <span className="hidden md:inline-block text-sm">
-                {user.email}
+                demo@meettrack.com
               </span>
             </Button>
           </DropdownMenuTrigger>

@@ -50,10 +50,15 @@ export default function MeetManagement() {
   const [loadingMeets, setLoadingMeets] = useState(false);
   const [editingMeet, setEditingMeet] = useState<any>(null);
 
-  // Load meets list on component mount
+  // Load meets list on component mount and when state changes
   useEffect(() => {
     loadMeetsList();
   }, []);
+
+  // Refresh meets list when the powerlifting state changes
+  useEffect(() => {
+    loadMeetsList();
+  }, [state.meetInfo]);
 
   // Load meets list
   const loadMeetsList = async () => {
@@ -77,7 +82,12 @@ export default function MeetManagement() {
     setSaving(true);
     try {
       await setActiveMeet(meetId);
-      await loadMeetsList(); // Refresh the list
+      // Force a complete refresh of the meets list and component state
+      await loadMeetsList();
+      // Add a small delay to ensure the database changes are reflected
+      setTimeout(async () => {
+        await loadMeetsList();
+      }, 500);
       toast({
         title: "Meet selected!",
         description: "Your active meet has been updated.",
