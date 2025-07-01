@@ -74,9 +74,12 @@ export default function PowerliftingDashboard({
   });
   const [liftEditOpen, setLiftEditOpen] = useState(false);
   const [liftEditForm, setLiftEditForm] = useState({
-    squatMax: state.currentStats.squatMax.toString(),
-    benchMax: state.currentStats.benchMax.toString(),
-    deadliftMax: state.currentStats.deadliftMax.toString(),
+    squatMax: "",
+    benchMax: "",
+    deadliftMax: "",
+    goalSquatMax: "",
+    goalBenchMax: "",
+    goalDeadliftMax: "",
   });
   const [meetListOpen, setMeetListOpen] = useState(false);
   const [meetsList, setMeetsList] = useState<any[]>([]);
@@ -322,21 +325,42 @@ export default function PowerliftingDashboard({
     }
   };
 
+  // Initialize lift edit form when dialog opens
+  const handleLiftEditOpen = () => {
+    setLiftEditForm({
+      squatMax: state.currentStats.squatMax.toString(),
+      benchMax: state.currentStats.benchMax.toString(),
+      deadliftMax: state.currentStats.deadliftMax.toString(),
+      goalSquatMax: (state.currentStats.goalSquatMax || 0).toString(),
+      goalBenchMax: (state.currentStats.goalBenchMax || 0).toString(),
+      goalDeadliftMax: (state.currentStats.goalDeadliftMax || 0).toString(),
+    });
+    setLiftEditOpen(true);
+  };
+
+  // Calculate recommended goal lift (105% of current max)
+  const getRecommendedGoal = (currentMax: number) => {
+    return Math.round(currentMax * 1.05 * 4) / 4; // Round to nearest 0.25kg
+  };
+
   // Handle lift stats update
   const handleLiftStatsUpdate = async () => {
     setSaving(true);
     try {
       await saveCurrentStats({
         ...state.currentStats,
-        squatMax: parseFloat(liftEditForm.squatMax),
-        benchMax: parseFloat(liftEditForm.benchMax),
-        deadliftMax: parseFloat(liftEditForm.deadliftMax),
+        squatMax: parseFloat(liftEditForm.squatMax) || 0,
+        benchMax: parseFloat(liftEditForm.benchMax) || 0,
+        deadliftMax: parseFloat(liftEditForm.deadliftMax) || 0,
+        goalSquatMax: parseFloat(liftEditForm.goalSquatMax) || 0,
+        goalBenchMax: parseFloat(liftEditForm.goalBenchMax) || 0,
+        goalDeadliftMax: parseFloat(liftEditForm.goalDeadliftMax) || 0,
       });
 
       setLiftEditOpen(false);
       toast({
         title: "Lift stats updated!",
-        description: "Your current maxes have been saved.",
+        description: "Your current maxes and goals have been saved.",
       });
     } catch (error) {
       toast({
@@ -578,7 +602,10 @@ export default function PowerliftingDashboard({
 
           <Dialog open={liftEditOpen} onOpenChange={setLiftEditOpen}>
             <DialogTrigger asChild>
-              <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target">
+              <Card
+                className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer touch-target"
+                onClick={handleLiftEditOpen}
+              >
                 <CardHeader className="pb-2 p-3 sm:p-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xs sm:text-sm font-medium text-gray-400 truncate">
@@ -603,70 +630,235 @@ export default function PowerliftingDashboard({
                 </CardContent>
               </Card>
             </DialogTrigger>
-            <DialogContent className="bg-gray-800 border-gray-700 text-white">
+            <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Edit Current Maxes</DialogTitle>
+                <DialogTitle>Edit Current Maxes & Goals</DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Update your current one-rep max for each lift.
+                  Update your current one-rep max and goal lifts for each
+                  exercise.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="squatMax" className="text-gray-300">
-                    Squat Max (kg)
-                  </Label>
-                  <Input
-                    id="squatMax"
-                    type="number"
-                    value={liftEditForm.squatMax}
-                    onChange={(e) =>
-                      setLiftEditForm((prev) => ({
-                        ...prev,
-                        squatMax: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter squat max"
-                    className="bg-gray-700 border-gray-600 text-white mt-1"
-                    step="0.5"
-                  />
+              <div className="space-y-6 max-h-96 overflow-y-auto">
+                {/* Squat Section */}
+                <div className="bg-red-900/20 p-4 rounded-lg border border-red-700">
+                  <h3 className="text-red-400 font-semibold mb-3 flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Squat
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="squatMax" className="text-gray-300">
+                        Current Max (kg)
+                      </Label>
+                      <Input
+                        id="squatMax"
+                        type="number"
+                        value={liftEditForm.squatMax}
+                        onChange={(e) =>
+                          setLiftEditForm((prev) => ({
+                            ...prev,
+                            squatMax: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter squat max"
+                        className="bg-gray-700 border-gray-600 text-white mt-1"
+                        step="0.25"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="goalSquatMax" className="text-gray-300">
+                        Goal Max (kg)
+                        <span className="text-xs text-gray-500 ml-2">
+                          Recommended:{" "}
+                          {getRecommendedGoal(
+                            parseFloat(liftEditForm.squatMax) || 0,
+                          )}
+                          kg
+                        </span>
+                      </Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="goalSquatMax"
+                          type="number"
+                          value={liftEditForm.goalSquatMax}
+                          onChange={(e) =>
+                            setLiftEditForm((prev) => ({
+                              ...prev,
+                              goalSquatMax: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter goal"
+                          className="bg-gray-700 border-gray-600 text-white"
+                          step="0.25"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setLiftEditForm((prev) => ({
+                              ...prev,
+                              goalSquatMax: getRecommendedGoal(
+                                parseFloat(prev.squatMax) || 0,
+                              ).toString(),
+                            }))
+                          }
+                          className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 whitespace-nowrap"
+                        >
+                          Use 105%
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="benchMax" className="text-gray-300">
-                    Bench Max (kg)
-                  </Label>
-                  <Input
-                    id="benchMax"
-                    type="number"
-                    value={liftEditForm.benchMax}
-                    onChange={(e) =>
-                      setLiftEditForm((prev) => ({
-                        ...prev,
-                        benchMax: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter bench max"
-                    className="bg-gray-700 border-gray-600 text-white mt-1"
-                    step="0.5"
-                  />
+
+                {/* Bench Section */}
+                <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-700">
+                  <h3 className="text-blue-400 font-semibold mb-3 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Bench Press
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="benchMax" className="text-gray-300">
+                        Current Max (kg)
+                      </Label>
+                      <Input
+                        id="benchMax"
+                        type="number"
+                        value={liftEditForm.benchMax}
+                        onChange={(e) =>
+                          setLiftEditForm((prev) => ({
+                            ...prev,
+                            benchMax: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter bench max"
+                        className="bg-gray-700 border-gray-600 text-white mt-1"
+                        step="0.25"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="goalBenchMax" className="text-gray-300">
+                        Goal Max (kg)
+                        <span className="text-xs text-gray-500 ml-2">
+                          Recommended:{" "}
+                          {getRecommendedGoal(
+                            parseFloat(liftEditForm.benchMax) || 0,
+                          )}
+                          kg
+                        </span>
+                      </Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="goalBenchMax"
+                          type="number"
+                          value={liftEditForm.goalBenchMax}
+                          onChange={(e) =>
+                            setLiftEditForm((prev) => ({
+                              ...prev,
+                              goalBenchMax: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter goal"
+                          className="bg-gray-700 border-gray-600 text-white"
+                          step="0.25"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setLiftEditForm((prev) => ({
+                              ...prev,
+                              goalBenchMax: getRecommendedGoal(
+                                parseFloat(prev.benchMax) || 0,
+                              ).toString(),
+                            }))
+                          }
+                          className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 whitespace-nowrap"
+                        >
+                          Use 105%
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="deadliftMax" className="text-gray-300">
-                    Deadlift Max (kg)
-                  </Label>
-                  <Input
-                    id="deadliftMax"
-                    type="number"
-                    value={liftEditForm.deadliftMax}
-                    onChange={(e) =>
-                      setLiftEditForm((prev) => ({
-                        ...prev,
-                        deadliftMax: e.target.value,
-                      }))
-                    }
-                    placeholder="Enter deadlift max"
-                    className="bg-gray-700 border-gray-600 text-white mt-1"
-                    step="0.5"
-                  />
+
+                {/* Deadlift Section */}
+                <div className="bg-green-900/20 p-4 rounded-lg border border-green-700">
+                  <h3 className="text-green-400 font-semibold mb-3 flex items-center gap-2">
+                    <Dumbbell className="h-4 w-4" />
+                    Deadlift
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="deadliftMax" className="text-gray-300">
+                        Current Max (kg)
+                      </Label>
+                      <Input
+                        id="deadliftMax"
+                        type="number"
+                        value={liftEditForm.deadliftMax}
+                        onChange={(e) =>
+                          setLiftEditForm((prev) => ({
+                            ...prev,
+                            deadliftMax: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter deadlift max"
+                        className="bg-gray-700 border-gray-600 text-white mt-1"
+                        step="0.25"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="goalDeadliftMax"
+                        className="text-gray-300"
+                      >
+                        Goal Max (kg)
+                        <span className="text-xs text-gray-500 ml-2">
+                          Recommended:{" "}
+                          {getRecommendedGoal(
+                            parseFloat(liftEditForm.deadliftMax) || 0,
+                          )}
+                          kg
+                        </span>
+                      </Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="goalDeadliftMax"
+                          type="number"
+                          value={liftEditForm.goalDeadliftMax}
+                          onChange={(e) =>
+                            setLiftEditForm((prev) => ({
+                              ...prev,
+                              goalDeadliftMax: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter goal"
+                          className="bg-gray-700 border-gray-600 text-white"
+                          step="0.25"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setLiftEditForm((prev) => ({
+                              ...prev,
+                              goalDeadliftMax: getRecommendedGoal(
+                                parseFloat(prev.deadliftMax) || 0,
+                              ).toString(),
+                            }))
+                          }
+                          className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 whitespace-nowrap"
+                        >
+                          Use 105%
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -682,7 +874,7 @@ export default function PowerliftingDashboard({
                   disabled={saving}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  {saving ? "Saving..." : "Save Changes"}
+                  {saving ? "Saving..." : "Save All Changes"}
                 </Button>
               </DialogFooter>
             </DialogContent>

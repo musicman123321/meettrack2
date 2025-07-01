@@ -170,13 +170,9 @@ export default function LiftCard({
                     </div>
                   </div>
                   <div className="text-center p-2 bg-gray-700 rounded">
-                    <div className="text-gray-400">Goal</div>
+                    <div className="text-gray-400">Third</div>
                     <div className="text-white font-semibold">
-                      {formatWeight(
-                        (state.currentStats[
-                          `goal${lift.charAt(0).toUpperCase() + lift.slice(1)}Max` as keyof typeof state.currentStats
-                        ] as number) || 0,
-                      )}
+                      {formatWeight(attempts.third)}
                     </div>
                   </div>
                 </div>
@@ -274,28 +270,20 @@ export default function LiftCard({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="goal" className="text-gray-300">
-                    Lift Goal (kg)
+                  <Label htmlFor="third" className="text-gray-300">
+                    Third Attempt (kg)
                   </Label>
                   <Input
-                    id="goal"
+                    id="third"
                     type="number"
-                    value={
-                      (state.currentStats[
-                        `goal${lift.charAt(0).toUpperCase() + lift.slice(1)}Max` as keyof typeof state.currentStats
-                      ] as number) || 0
+                    value={editForm.third}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        third: e.target.value,
+                      }))
                     }
-                    onChange={(e) => {
-                      const goalValue = parseFloat(e.target.value) || 0;
-                      // Update the goal in current stats immediately for UI feedback
-                      const updatedStats = {
-                        ...state.currentStats,
-                        [`goal${lift.charAt(0).toUpperCase() + lift.slice(1)}Max`]:
-                          goalValue,
-                      };
-                      // This would need to be handled by the parent component
-                    }}
-                    placeholder="Lift Goal"
+                    placeholder="Third attempt"
                     className="bg-gray-700 border-gray-600 text-white mt-1"
                     step="0.5"
                   />
